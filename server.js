@@ -144,6 +144,51 @@ function denyAuth(res, msg) {
   res.end(msg);
 }
 
+// 登录失败限流：同一 IP 15 分钟内错 5 次，锁定 15 分钟，防止无限爆破
+const AUTH_MAX_FAILS = 5;
+const AUTH_WINDOW_MS = 15 * 60 * 1000;
+const authFails = new Map();
+
+// 取客户端 IP：优先反向代理注入的 x-real-ip，其次 x-forwarded-for 首段
+function clientIp(req) {
+  const real = req.headers['x-real-ip'];
+  if (real) return String(real).trim();
+  const xff = req.headers['x-forwarded-for'];
+  if (xff) return String(xff).split(',')[0].trim();
+  return req.socket.remoteAddress || 'unknown';
+}
+
+// 返回剩余锁定毫秒数，0 表示未锁定
+function authBlockedMs(ip) {
+  const rec = authFails.get(ip);
+  if (!rec || !rec.blockedUntil) return 0;
+  const left = rec.blockedUntil - Date.now();
+  if (left <= 0) {
+    authFails.delete(ip);
+    return 0;
+  }
+  return left;
+}
+
+function noteAuthFail(ip) {
+  const now = Date.now();
+  let rec = authFails.get(ip);
+  if (!rec || now - rec.since > AUTH_WINDOW_MS) rec = { count: 0, since: now, blockedUntil: 0 };
+  rec.count += 1;
+  if (rec.count >= AUTH_MAX_FAILS) rec.blockedUntil = now + AUTH_WINDOW_MS;
+  authFails.set(ip, rec);
+  // 防止长期运行后 Map 无限增长
+  if (authFails.size > 5000) {
+    for (const [k, v] of authFails) {
+      if (!v.blockedUntil || v.blockedUntil <= now) authFails.delete(k);
+    }
+  }
+}
+
+function clearAuthFail(ip) {
+  authFails.delete(ip);
+}
+
 // 判断 target 是否位于 root 目录内（Windows 下不区分大小写）
 function isInside(target, root) {
   const t = process.platform === 'win32' ? target.toLowerCase() : target;
@@ -309,9 +354,23 @@ async function serveStatic(req, res, pathname) {
 }
 
 const server = http.createServer(async (req, res) => {
-  // 1. 访问门禁：所有请求（页面 + API）先过 Basic Auth
-  if (AUTH_ENABLED && !basicAuthOk(req)) {
-    return denyAuth(res, 'Access Denied');
+  // 1. 访问门禁：所有请求（页面 + API）先过 Basic Auth，并限制失败次数
+  if (AUTH_ENABLED) {
+    const ip = clientIp(req);
+    const waitMs = authBlockedMs(ip);
+    if (waitMs > 0) {
+      res.writeHead(429, {
+        'Retry-After': String(Math.ceil(waitMs / 1000)),
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-store'
+      });
+      return res.end('尝试次数过多，请 ' + Math.ceil(waitMs / 60000) + ' 分钟后再试');
+    }
+    if (!basicAuthOk(req)) {
+      noteAuthFail(ip);
+      return denyAuth(res, 'Access Denied');
+    }
+    clearAuthFail(ip);
   }
 
   const url = new URL(req.url, 'http://' + (req.headers.host || 'localhost'));

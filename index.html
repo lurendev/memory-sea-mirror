@@ -113,6 +113,8 @@
   .res .rs{font-size:10px;color:var(--dim);margin-left:auto;flex:0 0 auto}
   .empty{font-size:12px;color:var(--dim);padding:8px 2px;line-height:1.6}
   .foot{font-size:10px;color:var(--dim);line-height:1.7;border-top:1px solid var(--line);padding-top:10px;margin-top:4px}
+  .site-credit{margin-top:9px;letter-spacing:.08em}
+  #uptime{font-variant-numeric:tabular-nums}
   .sel-empty{padding:18px 8px;color:var(--dim);font-size:12px;line-height:1.8;text-align:center}
   .sel-empty b{display:block;color:var(--muted);font-size:13px;margin-bottom:5px}
   .badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:11px;border:1px solid var(--line2);color:var(--muted)}
@@ -339,7 +341,7 @@
 <div id="app">
   <header>
     <button class="menu-btn" id="menu" aria-label="打开面板">☰ 面板</button>
-    <div class="brand"><b>记忆海-镜子</b><span>MEMORY SEA · MIRROR · v2.2.0</span></div>
+    <div class="brand"><b>记忆海-镜子</b><span>MEMORY SEA · MIRROR · v2.3.0</span></div>
     <button class="pane-btn" id="toggle-left" type="button" title="收起左侧栏" aria-label="收起左侧栏">◀</button>
     <div class="stats" id="stats"></div>
     <button class="preset" id="roam" title="随机漫游：镜头缓慢漂移，随机点亮久未连接的节点并平滑移到画面中央；再次点击停止">漫游</button>
@@ -407,6 +409,8 @@
       内容由你自己录入或导入（JSON）<br>
       30 天未打开的节点会逐渐变暗、连线变细，90 天后隐藏，点开即恢复<br>
       标注【待补】【未知】的条目保持空缺，未作推测。
+      <div class="site-credit">© 2026 By 路人</div>
+      <div id="uptime">小站已运行 …</div>
     </div>
   </aside>
 
@@ -494,7 +498,7 @@
 
     <blockquote class="about-quote">“只要你还能因为一个绝妙的想法而感到战栗，你的宇宙就依然在运转。”</blockquote>
 
-    <div class="about-foot"><b>Memory Sea - Mirror v2.2.0</b><span>独立开发</span></div>
+    <div class="about-foot"><b>Memory Sea - Mirror v2.3.0</b><span>独立开发</span></div>
   </div>
 </div>
 <div id="toast"></div>
@@ -511,7 +515,7 @@
   var TEMPLATE = {
     title: '记忆海-镜子',
     subtitle: 'MEMORY SEA · MIRROR',
-    version: 'v2.2.0',
+    version: 'v2.3.0',
     hubTitle: '观测点',
     hubDesc: '整张图的中心，也是「正在观看的那一点」。它不归属任何一层；转动视角时它会轻微偏移，中心跟着观察者走。',
     exportName: 'memory-nebula',
@@ -573,11 +577,28 @@
     dream: '🌙 潜意识残影'
   };
   var AUTO_ENTITY_DESC = /^由日记自动提取的实体。?$/;
+  var META_DESC = 'AI 归纳的元标签分类节点。';
+  var META_MOOD = '🏷️ 同类归拢';
   function moodDesc(n) {
     if (!n) return '';
     var d = n.desc || '';
+    if (d === META_DESC) return META_MOOD;
     if (d && !AUTO_ENTITY_DESC.test(d)) return d;
     return LAYER_MOOD[n.cat] || d;
+  }
+  // 把旧存档里已写入的机械描述统一改写为氛围文案
+  function migrateMoodDesc() {
+    var changed = false;
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      if (!n || !n.desc) continue;
+      if (n.desc === META_DESC) { n.desc = META_MOOD; changed = true; }
+      else if (AUTO_ENTITY_DESC.test(n.desc)) {
+        n.desc = n.isMeta ? META_MOOD : (LAYER_MOOD[n.cat] || n.desc);
+        changed = true;
+      }
+    }
+    return changed;
   }
 
   // 梦境层的内容：一篇「梦」节点，附带可展开的具体内容
@@ -767,6 +788,7 @@
     syncDreamMeta();
     migrateDiaryLayer();
     syncLayerIntros();
+    migrateMoodDesc();
     renderLegend();
     return true;
   }
@@ -3822,7 +3844,7 @@
       if (!m) {
         var mid = newId();
         while (byId[mid]) mid += '_x';
-        m = mkNode(groupCat, '◈ ' + key, 'AI 归纳的元标签分类节点。', 0.8, { id: mid });
+        m = mkNode(groupCat, '◈ ' + key, META_MOOD, 0.8, { id: mid });
         m.isMeta = true;
         m.labelUntil = now + 15000;
         spawnBorn(m, main, now);
@@ -3852,7 +3874,7 @@
       }
       var catId = (item && typeof item === 'object' && item.layer && CATS[item.layer]) ? item.layer : 'activity';
       // 实体权重低于日记主节点，作为依附的卫星
-      var n = mkNode(catId, name, LAYER_MOOD[catId] || '由日记自动提取的实体。', 0.5, { id: newId() });
+      var n = mkNode(catId, name, LAYER_MOOD[catId] || LAYER_MOOD.activity, 0.5, { id: newId() });
       spawnBorn(n, main, now);
       attachGroup(n, catId);
       attachMeta(n, catId, metaName);
@@ -4207,6 +4229,20 @@
 
   // 统计
   updateStats();
+
+  // 页脚：版权与站点运行时长（起点为 v1.0.0 上线时间）
+  var SITE_SINCE = Date.parse('2026-11-03T00:00:00+08:00');
+  function tickUptime() {
+    var el = document.getElementById('uptime');
+    if (!el) return;
+    var total = Math.floor(Math.max(0, Date.now() - SITE_SINCE) / 1000);
+    var days = Math.floor(total / 86400);
+    el.textContent = '小站已运行 ' + Math.floor(days / 365) + '年' + (days % 365) +
+      '天 ' + (Math.floor(total / 3600) % 24) + '小时' +
+      (Math.floor(total / 60) % 60) + '分' + (total % 60) + '秒';
+  }
+  tickUptime();
+  setInterval(tickUptime, 1000);
 
   // 空闲自动退出：30 分钟无操作时清掉浏览器缓存的 Basic Auth 凭证，强制重新输密码
   var IDLE_LIMIT_MS = 30 * 60 * 1000;
