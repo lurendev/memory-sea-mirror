@@ -1,0 +1,4250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>记忆海-镜子</title>
+<style>
+  :root{
+    --bg:#05060a; --bg2:#080a12; --panel:rgba(14,17,26,.86); --panel-solid:#0d1018;
+    --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.14);
+    --text:#e8ecf4; --muted:#8e97ab; --dim:#5c6477;
+    --hub:#ffe2a0; --core:#f5c542; --system:#5be0e0; --tgh:#b08cff;
+    --aht:#5b8cff; --rcl:#45d68a; --pot:#ff9f45; --data:#7fa6c8; --note:#8a8f98;
+    --red:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:
+      radial-gradient(1200px 700px at 18% 8%, rgba(90,120,255,.10), transparent 62%),
+      radial-gradient(900px 600px at 85% 92%, rgba(255,140,60,.06), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font:400 14px/1.55 "PingFang SC","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",sans-serif;
+    overflow:hidden;
+  }
+  #app{display:grid;grid-template-columns:262px 1fr 318px;grid-template-rows:52px 1fr;height:100vh;height:100dvh}
+  header{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 18px;border-bottom:1px solid var(--line);background:rgba(5,6,10,.6);backdrop-filter:blur(8px)}
+  .brand{display:flex;align-items:baseline;gap:9px;white-space:nowrap}
+  .brand b{font-size:16px;letter-spacing:.08em;font-weight:600}
+  .brand span{font-size:11px;color:var(--dim);letter-spacing:.18em}
+  .menu-btn{display:none;align-items:center;gap:5px;padding:5px 9px;border-radius:8px;border:1px solid var(--line2);background:rgba(255,255,255,.04);color:var(--muted);font:400 12px/1.2 inherit;cursor:pointer;flex:0 0 auto}
+  .pane-btn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;border-radius:7px;border:1px solid var(--line2);background:rgba(255,255,255,.04);color:var(--muted);font:400 12px/1 inherit;cursor:pointer;flex:0 0 auto}
+  .pane-btn:hover{color:var(--text);border-color:rgba(150,180,255,.45)}
+  .stats{margin-left:auto;color:var(--muted);font-size:12px;white-space:nowrap}
+  .stats b{color:var(--text);font-weight:600}
+  .sync{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);padding:3px 9px;border:1px solid var(--line);border-radius:999px;white-space:nowrap}
+  .preset{background:rgba(255,255,255,.05);border:1px solid var(--line);color:#dfe7f6;font-size:11px;padding:4px 11px;border-radius:999px;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .preset:hover{border-color:rgba(150,180,255,.45);color:#fff}
+  .preset.on{border-color:rgba(255,210,120,.7);color:#ffe2a0;background:rgba(255,190,90,.14)}
+  .sync i{width:6px;height:6px;border-radius:50%;background:var(--dim);flex:0 0 auto}
+  .sync.server i{background:#45d68a;box-shadow:0 0 8px #45d68a}
+  .sync.local i{background:#ffb35c}
+  .sync.saving i{background:#5b8cff;animation:pulse 1s ease-in-out infinite}
+  .sync.error i{background:#ff6b6b}
+  @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+  aside{min-height:0;overflow-y:auto;background:var(--panel);border-right:1px solid var(--line);padding:14px}
+  #right{border-right:none;border-left:1px solid var(--line)}
+  @media (min-width:1081px){
+    #app.hide-left{grid-template-columns:0 1fr 318px}
+    #app.hide-right{grid-template-columns:262px 1fr 0}
+    #app.hide-left.hide-right{grid-template-columns:0 1fr 0}
+    #app.hide-left aside#left, #app.hide-right aside#right{width:0;min-width:0;padding:0;border-width:0;overflow:hidden;visibility:hidden}
+  }
+  @media (min-width:721px) and (max-width:1080px){
+    #app.hide-left{grid-template-columns:0 1fr}
+    #app.hide-left aside#left{width:0;min-width:0;padding:0;border-width:0;overflow:hidden;visibility:hidden}
+  }
+  aside::-webkit-scrollbar, #results::-webkit-scrollbar, #listview::-webkit-scrollbar{width:6px}
+  aside::-webkit-scrollbar-thumb, #results::-webkit-scrollbar-thumb, #listview::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:3px}
+  main{position:relative;min-height:0;overflow:hidden}
+  canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+  canvas.dragging{cursor:grabbing}
+  .sec{margin-bottom:16px}
+  .sec-t{font-size:11px;letter-spacing:.16em;color:var(--dim);margin:0 0 8px;text-transform:uppercase}
+  .search{position:relative}
+  .search input{
+    width:100%;padding:8px 30px 8px 10px;border-radius:8px;border:1px solid var(--line2);
+    background:rgba(255,255,255,.04);color:var(--text);font:400 13px/1.4 inherit;outline:none;
+  }
+  .search input:focus{border-color:rgba(120,160,255,.55);box-shadow:0 0 0 3px rgba(90,130,255,.10)}
+  .search input::placeholder{color:var(--dim)}
+  .search .clr{position:absolute;right:6px;top:5px;width:22px;height:22px;border:0;border-radius:50%;background:transparent;color:var(--dim);cursor:pointer;font-size:15px;line-height:1}
+  .search .clr:hover{color:var(--text);background:rgba(255,255,255,.06)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  #cats{display:flex;flex-direction:column;flex-wrap:nowrap;gap:6px}
+  #cats .chip{width:100%;justify-content:flex-start;padding:7px 10px;border-radius:8px}
+  #cats .chip .box{flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:12px;height:12px;border-radius:3px;border:1px solid currentColor;opacity:.6;transition:background .14s,opacity .14s}
+  #cats .chip .box::after{content:'✓';font-size:9px;line-height:1;font-weight:700;color:#0a0d14}
+  #cats .chip:not(.off) .box{background:currentColor;opacity:.9}
+  #cats .chip.off .box{background:transparent;opacity:.4}
+  #cats .chip.off .box::after{content:''}
+  #cats .chip:hover .box{opacity:1}
+  #cats .chip:hover{background:rgba(255,255,255,.06)}
+  #cats .chip.on{background:rgba(255,255,255,.10);border-color:currentColor}
+  #cats .chip.hubchip{border-color:rgba(255,226,160,.35)}
+  #cats .chip.hubchip .cn{color:rgba(255,226,160,.7)}
+  #cats .chip .cn{margin-left:auto;font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;
+    border:1px solid var(--line2);background:rgba(255,255,255,.03);color:var(--muted);
+    font-size:12px;cursor:pointer;user-select:none;transition:all .14s;
+  }
+  .chip:hover{color:var(--text);border-color:rgba(255,255,255,.26)}
+  .chip.off{opacity:.36;text-decoration:line-through}
+  .chip .dot{width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:7px solid currentColor;filter:drop-shadow(0 0 5px currentColor)}
+  .views{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .view-btn{
+    padding:6px 4px;border-radius:8px;border:1px solid var(--line2);background:rgba(255,255,255,.03);
+    color:var(--muted);font:400 12px/1.3 inherit;cursor:pointer;transition:all .14s
+  }
+  .view-btn:hover{color:var(--text)}
+  .view-btn.on{color:#0a0d14;background:var(--text);border-color:var(--text);font-weight:600}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:9px 0;font-size:12px;color:var(--muted)}
+  input[type=range]{width:112px;accent-color:#8aa2ff;background:transparent}
+  .switch{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;color:var(--muted)}
+  .switch input{accent-color:#8aa2ff}
+  #results{max-height:212px;overflow-y:auto;margin-top:8px}
+  .res{display:flex;gap:8px;align-items:flex-start;padding:6px 7px;border-radius:7px;cursor:pointer}
+  .res:hover{background:rgba(255,255,255,.05)}
+  .res .dot{width:6px;height:6px;border-radius:50%;margin-top:6px;flex:0 0 auto}
+  .res .rt{font-size:12px;color:var(--text);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .res .rs{font-size:10px;color:var(--dim);margin-left:auto;flex:0 0 auto}
+  .empty{font-size:12px;color:var(--dim);padding:8px 2px;line-height:1.6}
+  .foot{font-size:10px;color:var(--dim);line-height:1.7;border-top:1px solid var(--line);padding-top:10px;margin-top:4px}
+  .sel-empty{padding:18px 8px;color:var(--dim);font-size:12px;line-height:1.8;text-align:center}
+  .sel-empty b{display:block;color:var(--muted);font-size:13px;margin-bottom:5px}
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:11px;border:1px solid var(--line2);color:var(--muted)}
+  .badge .dot{width:6px;height:6px;border-radius:50%}
+  #detail h3{margin:2px 0 6px;font-size:16px;line-height:1.45;font-weight:600}
+  #detail .meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
+  #detail .desc{white-space:pre-wrap;font-size:13px;color:#c9d2e3;line-height:1.75;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:9px;padding:10px 11px;margin-bottom:12px}
+  #detail .content{white-space:pre-wrap;font-size:12.5px;color:#b9c4d8;line-height:1.8;border-left:2px solid rgba(140,170,255,.3);padding:2px 0 2px 10px;margin-bottom:12px}
+  #detail .tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}
+  .tag{font-size:11px;color:var(--muted);border:1px solid var(--line);background:rgba(255,255,255,.03);border-radius:5px;padding:2px 6px;font-family:ui-monospace,Consolas,monospace}
+  .links{display:flex;flex-direction:column;gap:4px}
+  .lk{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:7px;cursor:pointer;font-size:12px;color:var(--muted)}
+  .lk:hover{background:rgba(255,255,255,.05);color:var(--text)}
+  .lk .dot{width:5px;height:5px;border-radius:50%;flex:0 0 auto}
+  .lk .ty{margin-left:auto;font-size:10px;color:var(--dim);font-family:ui-monospace,Consolas,monospace}
+  .lk .unlink{margin-left:5px;width:17px;height:17px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--dim);font:400 13px/1 inherit;cursor:pointer;flex:0 0 auto}
+  .lk .unlink:hover{color:#ff8d8d;background:rgba(255,107,107,.12)}
+  .days{margin-top:6px}
+  .dayblock{border-top:1px solid rgba(255,255,255,.07);padding:7px 0}
+  .dayblock:first-child{border-top:0}
+  .dayblock summary{cursor:pointer;font-size:11px;letter-spacing:.04em;color:var(--dim);list-style:none;outline:none}
+  .dayblock summary::-webkit-details-marker{display:none}
+  .dayblock summary:before{content:'▸';display:inline-block;width:12px;color:var(--dim)}
+  .dayblock[open] summary:before{content:'▾'}
+  .dayblock summary:hover{color:var(--text)}
+  canvas.linking{cursor:crosshair}
+  .why{font-size:11px;color:var(--dim);margin-top:8px;line-height:1.6}
+  .why code{color:#9fb0cf;font-family:ui-monospace,Consolas,monospace}
+  #tip{
+    position:absolute;pointer-events:none;z-index:30;padding:5px 9px;border-radius:7px;
+    background:rgba(9,11,18,.92);border:1px solid var(--line2);font-size:12px;color:var(--text);
+    opacity:0;transform:translate(-50%,-140%);transition:opacity .12s;white-space:normal;max-width:290px;
+  }
+  #tip b{display:block;font-weight:600;margin-bottom:3px}
+  #tip span{display:block;font-size:11px;color:var(--muted);line-height:1.5}
+  #hint{position:absolute;left:16px;bottom:13px;font-size:11px;color:var(--dim);pointer-events:none;line-height:1.7}
+  #filetip{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:40;display:none;max-width:min(600px,calc(100% - 28px));padding:9px 26px 9px 12px;border-radius:10px;border:1px solid rgba(255,179,92,.35);background:rgba(35,24,10,.94);color:#ffd9a0;font-size:12px;line-height:1.65;box-shadow:0 8px 24px rgba(0,0,0,.45);backdrop-filter:blur(6px)}
+  #filetip.on{display:block}
+  #filetip code{font-family:ui-monospace,Consolas,monospace;color:#fff}
+  #filetip .x{position:absolute;right:5px;top:5px;width:18px;height:18px;padding:0;border:0;border-radius:50%;background:transparent;color:#ffd9a0;font:400 13px/1 inherit;cursor:pointer}
+  #filetip .x:hover{background:rgba(255,217,160,.16)}
+  #legend{position:absolute;right:16px;bottom:13px;display:flex;gap:12px;font-size:10px;color:var(--dim);pointer-events:none}
+  #legend i{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px}
+  #listview{position:absolute;inset:0;overflow-y:auto;padding:20px 22px;background:rgba(5,6,10,.55);display:none}
+  #listview.on{display:block}
+  #docview{position:absolute;inset:0;overflow-y:auto;padding:32px 22px 56px;background:rgba(5,6,10,.78);display:none}
+  #docview.on{display:block}
+  #docview::-webkit-scrollbar{width:6px}
+  #docview::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:3px}
+  .doc{max-width:780px;margin:0 auto;font-size:13.5px;line-height:1.9;color:#c3ccdd}
+  .doc-kicker{font-size:10px;letter-spacing:.24em;color:var(--dim);margin-bottom:9px}
+  .doc h1{margin:0 0 7px;font-size:23px;line-height:1.4;color:var(--text);font-weight:600}
+  .doc-meta{font-size:11.5px;color:var(--dim);margin-bottom:20px}
+  .doc h2{display:flex;align-items:center;gap:9px;margin:32px 0 4px;font-size:15px;font-weight:600;color:var(--text);scroll-margin-top:14px}
+  .doc h2 .mark{width:3px;height:15px;border-radius:2px;flex:0 0 auto}
+  .doc h2 .n{font-size:11px;font-weight:400;color:var(--dim)}
+  .doc p{margin:0 0 8px}
+  .doc ul{margin:0 0 8px;padding-left:19px}
+  .doc li{margin:2px 0}
+  .doc b{color:#e7edfa;font-weight:600}
+  .doc code{font-family:ui-monospace,Consolas,monospace;font-size:12px;background:rgba(120,150,255,.12);color:#a9bcff;padding:1px 5px;border-radius:4px}
+  .doc-body{border-left:2px solid rgba(140,170,255,.22);padding-left:11px}
+  .doc-intro{padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+  .doc-intro p{margin:0 0 8px}
+  .doc-toc{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.02)}
+  .doc-toc button{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;border:1px solid var(--line2);background:transparent;color:var(--muted);font:400 11.5px/1.5 inherit;cursor:pointer}
+  .doc-toc button:hover{color:var(--text);border-color:rgba(255,255,255,.28)}
+  .doc-toc i{width:6px;height:6px;border-radius:50%}
+  .doc-toc span{color:var(--dim);font-size:10.5px;font-variant-numeric:tabular-nums}
+  .doc-entry{padding:14px 0 12px;border-top:1px solid var(--line)}
+  .doc-entry h3{display:flex;align-items:center;gap:7px;margin:0 0 6px;font-size:13.5px;font-weight:600;color:#e9effb}
+  .doc-entry .d{color:var(--muted);font-size:12.5px;margin:0 0 7px}
+  .doc-entry .tag{font-weight:400;font-size:10px;color:var(--muted);border:1px solid var(--line2);border-radius:5px;padding:0 5px}
+  .doc-rel{margin-top:7px;font-size:11px;color:var(--dim)}
+  .doc-rel button{margin:0 5px 3px 0;padding:1px 7px;border-radius:5px;border:1px solid rgba(140,170,255,.22);background:rgba(140,170,255,.08);color:#a9bcff;font:400 11px/1.6 inherit;cursor:pointer}
+  .doc-rel button:hover{background:rgba(140,170,255,.2);color:#fff}
+  .doc-empty{color:var(--dim);font-size:12px}
+  .lv-group{margin-bottom:22px}
+  .lv-head{display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.06em;color:var(--muted);margin-bottom:9px}
+  .lv-head .dot{width:7px;height:7px;border-radius:50%}
+  .lv-head .n{color:var(--dim);font-size:11px}
+  .lv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:9px}
+  .card{
+    text-align:left;padding:10px 11px;border-radius:9px;border:1px solid var(--line);
+    background:rgba(255,255,255,.025);cursor:pointer;color:var(--text);font:inherit;transition:all .14s
+  }
+  .card:hover{border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.05);transform:translateY(-1px)}
+  .card .ct{font-size:13px;line-height:1.45;margin-bottom:4px}
+  .card .cd{font-size:11px;color:var(--dim);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .card.dim{opacity:.32}
+  .data-btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  /* 日记抽屉：毛玻璃 + 右下角悬浮入口 */
+  .diary-fab{
+    position:fixed;right:18px;bottom:74px;z-index:55;width:52px;height:52px;border-radius:50%;
+    border:1px solid rgba(255,215,0,.45);
+    background:radial-gradient(circle at 34% 28%,rgba(255,228,150,.30),rgba(18,15,8,.90));
+    color:#ffe9a8;font-size:22px;line-height:1;cursor:pointer;backdrop-filter:blur(10px);
+    box-shadow:0 10px 30px rgba(0,0,0,.55),0 0 22px rgba(255,215,0,.18);transition:transform .16s,box-shadow .16s
+  }
+  .diary-fab:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(0,0,0,.6),0 0 30px rgba(255,215,0,.3)}
+  .diary-fab.on{border-color:rgba(255,215,0,.8);box-shadow:0 0 0 2px rgba(255,215,0,.14),0 0 34px rgba(255,215,0,.4)}
+  #diary{
+    position:fixed;top:64px;right:16px;bottom:88px;width:min(420px,calc(100vw - 32px));z-index:56;
+    display:flex;flex-direction:column;padding:16px;border-radius:16px;border:1px solid rgba(255,215,0,.28);
+    background:linear-gradient(160deg,rgba(20,19,25,.84),rgba(8,9,14,.74));
+    backdrop-filter:blur(18px) saturate(1.25);
+    box-shadow:-16px 20px 64px rgba(0,0,0,.58);transform:translateX(calc(100% + 32px));opacity:0;
+    pointer-events:none;transition:transform .26s ease,opacity .2s ease
+  }
+  #diary.on{transform:none;opacity:1;pointer-events:auto}
+  #diary .d-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:11px}
+  .diary-kicker{font-size:10px;letter-spacing:.22em;color:#c9a94a}
+  .diary-title{font-size:16px;font-weight:600;margin-top:2px}
+  #diary-close{width:26px;height:26px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--dim);font:400 16px/1 inherit;cursor:pointer;flex:0 0 auto}
+  #diary-close:hover{color:var(--text);background:rgba(255,255,255,.08)}
+  #diary-title,#diary-text{
+    width:100%;border:1px solid var(--line2);border-radius:9px;background:rgba(255,255,255,.035);
+    color:var(--text);font:400 13px/1.6 inherit;outline:none;transition:border-color .14s,box-shadow .14s
+  }
+  #diary-title{padding:8px 10px;margin-bottom:9px}
+  #diary-text{flex:1;min-height:150px;padding:10px;resize:none}
+  #diary-title:focus,#diary-text:focus{border-color:rgba(255,215,0,.5);box-shadow:0 0 0 3px rgba(255,215,0,.08)}
+  #diary-title::placeholder,#diary-text::placeholder{color:var(--dim)}
+  .diary-foot{display:flex;align-items:center;gap:10px;margin-top:10px}
+  #diary-hint{flex:1;font-size:11px;color:var(--dim);line-height:1.5}
+  #diary-save{
+    flex:0 0 auto;border-color:rgba(255,215,0,.55);background:linear-gradient(180deg,#ffe38a,#e8b92e);
+    color:#1a1405;font-weight:600;white-space:nowrap
+  }
+  #diary-save:hover{border-color:#ffe9a8;filter:brightness(1.08)}
+  #diary-save:disabled{opacity:.55;cursor:wait;filter:none}
+  @media (max-width:720px){
+    .diary-fab{right:calc(14px + env(safe-area-inset-right));bottom:calc(64px + env(safe-area-inset-bottom));width:46px;height:46px;font-size:19px}
+    #diary{top:54px;right:10px;left:10px;bottom:calc(76px + env(safe-area-inset-bottom));width:auto}
+  }
+
+  #modal{position:fixed;inset:0;background:rgba(3,4,8,.74);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:60;padding:18px}
+  #modal.on{display:flex}
+  .modal-card{width:min(440px,100%);background:#0e121b;border:1px solid var(--line2);border-radius:14px;padding:18px;max-height:92vh;overflow-y:auto}
+  .modal-card h3{margin:0 0 14px;font-size:15px;font-weight:600}
+  .field{margin-bottom:11px}
+  .field label{display:block;font-size:11px;letter-spacing:.1em;color:var(--dim);margin-bottom:5px}
+  .field input[type=text], .field select, .field textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--line2);background:rgba(255,255,255,.04);color:var(--text);font:400 13px/1.5 inherit;outline:none}
+  .field textarea{resize:vertical;min-height:82px}
+  .field select{color-scheme:dark}
+  .field select option{background:#121a2d;color:#e6ecff}
+  .field input:focus, .field select:focus, .field textarea:focus{border-color:rgba(120,160,255,.55)}
+  .mrow{display:flex;align-items:center;gap:10px}
+  .mrow input[type=range]{flex:1;width:auto}
+  .mrow b{font-size:12px;color:var(--muted);min-width:34px;text-align:right}
+  .mactions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+  .btn{padding:7px 14px;border-radius:8px;border:1px solid var(--line2);background:rgba(255,255,255,.05);color:var(--text);font:400 13px/1.4 inherit;cursor:pointer}
+  .btn:hover{border-color:rgba(255,255,255,.3)}
+  .btn.primary{background:var(--text);color:#0a0d14;border-color:var(--text);font-weight:600}
+  .btn.danger{color:#ff8d8d;border-color:rgba(255,107,107,.35)}
+  .acts{display:flex;gap:6px;margin:0 0 10px}
+  .act{padding:4px 10px;border-radius:7px;border:1px solid var(--line2);background:transparent;color:var(--muted);font:400 12px/1.4 inherit;cursor:pointer}
+  .act:hover{color:var(--text);border-color:rgba(255,255,255,.3)}
+  .act.danger:hover{color:#ff8d8d;border-color:rgba(255,107,107,.4)}
+  #toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,10px);background:rgba(10,13,20,.95);border:1px solid var(--line2);padding:8px 14px;border-radius:9px;font-size:12px;color:var(--text);opacity:0;pointer-events:none;transition:.18s;z-index:70}
+  #toast.on{opacity:1;transform:translate(-50%,0)}
+  #about{position:fixed;inset:0;background:rgba(3,4,8,.82);backdrop-filter:blur(9px);display:none;align-items:center;justify-content:center;z-index:75;padding:18px}
+  #about.on{display:flex}
+  .about-card{
+    position:relative;width:min(620px,100%);max-height:90vh;overflow-y:auto;
+    background:
+      radial-gradient(620px 320px at 50% -12%, rgba(120,150,255,.13), transparent 70%),
+      linear-gradient(180deg,#0d1220,#090c14);
+    border:1px solid rgba(255,226,160,.16);border-radius:16px;padding:30px 30px 22px;
+    box-shadow:0 24px 90px rgba(0,0,0,.65);
+  }
+  .about-card::-webkit-scrollbar{width:6px}
+  .about-card::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:3px}
+  .about-x{position:absolute;right:12px;top:12px;width:30px;height:30px;padding:0;border:1px solid var(--line2);border-radius:50%;background:rgba(255,255,255,.04);color:var(--muted);font:400 16px/1 inherit;cursor:pointer}
+  .about-x:hover{color:var(--text);border-color:rgba(255,210,120,.5)}
+  .about-kicker{font-size:10px;letter-spacing:.3em;color:var(--dim);margin-bottom:8px}
+  .about-card h2{margin:0 0 9px;font-size:22px;letter-spacing:.06em;font-weight:600;color:#f3e6c8}
+  .about-lead{font-size:13.5px;line-height:1.9;color:#cdd6e6;margin:0 0 24px}
+  .about-card h3{font-size:11px;letter-spacing:.2em;color:#ffe2a0;margin:0 0 9px;font-weight:600}
+  .about-card p{font-size:12.5px;line-height:1.95;color:#b9c4d8;margin:0 0 11px}
+  .about-card p b{color:#e8ecf4;font-weight:600}
+  .about-warn{margin:20px 0 0;padding:15px 17px 5px;border:1px solid rgba(255,179,92,.18);border-radius:10px;background:rgba(255,150,60,.045)}
+  .about-quote{margin:20px 0 0;padding:12px 16px;border-left:2px solid rgba(255,210,120,.45);background:rgba(255,210,120,.045);border-radius:0 8px 8px 0;font-size:12.5px;line-height:1.85;color:#d9c9a4}
+  .about-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:22px;padding-top:14px;border-top:1px solid var(--line);font-size:11px;color:var(--dim);letter-spacing:.04em}
+  .about-foot b{color:#ffe2a0;font-weight:500}
+  @media (max-width:1080px){
+    #app{grid-template-columns:230px 1fr}
+    #right{display:none}
+    #right.open{display:block;position:fixed;right:0;top:52px;bottom:0;width:308px;z-index:40;background:var(--panel-solid);box-shadow:-18px 0 40px rgba(0,0,0,.45)}
+    #app.has-sel{grid-template-columns:230px 1fr}
+  }
+  @media (max-width:720px){
+    #app{grid-template-columns:1fr;grid-template-rows:48px 1fr}
+    header{padding:0 8px;gap:6px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+    header::-webkit-scrollbar{display:none}
+    .brand b{font-size:14px;letter-spacing:.04em}
+    #sync-text{display:none}
+    .sync{padding:3px 7px}
+    .preset{padding:4px 9px;font-size:10px}
+    .menu-btn{display:inline-flex}
+    #toggle-left{display:none}
+    .brand span{display:none}
+    .stats{display:none}
+    .sync{margin-left:auto;font-size:10px;padding:2px 7px}
+    aside#left{
+      display:block;position:fixed;left:0;top:48px;bottom:0;width:min(86vw,300px);z-index:50;
+      transform:translateX(-102%);transition:transform .22s ease;box-shadow:18px 0 40px rgba(0,0,0,.45);
+      padding-bottom:calc(24px + env(safe-area-inset-bottom));
+    }
+    aside#left.open{transform:none}
+    #right.open{top:48px;width:min(92vw,340px);padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+    #legend, #hint{display:none}
+    .lv-grid{grid-template-columns:1fr}
+    #listview{padding:14px}
+    #docview{padding:18px 14px 44px}
+    .doc h1{font-size:19px}
+    .doc h2{margin-top:26px}
+    .modal-card{max-height:86vh}
+    .about-card{max-height:88vh;padding:22px 18px 18px}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <button class="menu-btn" id="menu" aria-label="打开面板">☰ 面板</button>
+    <div class="brand"><b>记忆海-镜子</b><span>MEMORY SEA · MIRROR · v2.2.0</span></div>
+    <button class="pane-btn" id="toggle-left" type="button" title="收起左侧栏" aria-label="收起左侧栏">◀</button>
+    <div class="stats" id="stats"></div>
+    <button class="preset" id="roam" title="随机漫游：镜头缓慢漂移，随机点亮久未连接的节点并平滑移到画面中央；再次点击停止">漫游</button>
+    <button class="preset" id="about-open" title="关于：为什么做这片星云">关于</button>
+    <span class="sync local" id="sync"><i></i><span id="sync-text">仅本机</span></span>
+    <button class="pane-btn" id="toggle-right" type="button" title="收起右侧栏" aria-label="收起右侧栏">▶</button>
+  </header>
+
+  <aside id="left">
+    <div class="sec">
+      <div class="sec-t">检索</div>
+      <div class="search">
+        <input id="q" type="text" placeholder="例如：一个人、一件事、一个概念" autocomplete="off" spellcheck="false">
+        <button class="clr" id="clr" title="清空" aria-label="清空">×</button>
+      </div>
+      <div id="results"></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-t">视图</div>
+      <div class="views" id="views">
+        <button class="view-btn" data-view="galaxy">小银河</button>
+        <button class="view-btn on" data-view="nebula">星云</button>
+        <button class="view-btn" data-view="cluster">聚类</button>
+        <button class="view-btn" data-view="list">列表</button>
+        <button class="view-btn" data-view="matrix">矩阵</button>
+        <button class="view-btn" data-view="sunburst">旭日</button>
+        <button class="view-btn" data-view="tree">思维导图</button>
+        <button class="view-btn" data-view="doc">阅读</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-t">分层</div>
+      <div class="chips" id="cats"></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-t">数据</div>
+      <div class="data-btns">
+        <button class="view-btn" id="add">＋ 新增节点</button>
+        <button class="view-btn" id="addlayer">＋ 新增分层</button>
+        <button class="view-btn" id="export">导出 JSON</button>
+        <button class="view-btn" id="exportmd">导出 Markdown</button>
+        <button class="view-btn" id="import">导入 JSON</button>
+        <button class="view-btn" id="demo" hidden>演示 Demo</button>
+      </div>
+      <input id="file" type="file" accept=".json,application/json" hidden>
+      <div class="foot" style="border:0;padding-top:9px;margin:0">连上服务器后自动写入服务器；打不开服务器时保存在本机浏览器。</div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-t">显示</div>
+      <div class="row"><span>节点大小</span><input id="size" type="range" min="0.75" max="1.9" step="0.05" value="1.15"></div>
+      <div class="row"><span>自动旋转</span><label class="switch"><input id="rotate" type="checkbox" checked>开启</label></div>
+      <div class="row"><span>名称标签</span><label class="switch"><input id="labels" type="checkbox" checked>显示</label></div>
+      <div class="row"><span>全部文字</span><button class="view-btn" id="allnames" style="flex:0 0 auto;padding:4px 10px">显示全部</button></div>
+      <div class="row"><span>跨层关联</span><label class="switch"><input id="showrel" type="checkbox" checked>显示</label></div>
+      <div class="row"><span>突触修剪</span><label class="switch"><input id="prune" type="checkbox" checked>开启</label></div>
+      <div class="row"><span>视角</span><button class="view-btn" id="reset" style="flex:0 0 auto;padding:4px 10px">重置</button></div>
+    </div>
+
+    <div class="foot">
+      光点与连线数量随增删实时变化<br>
+      内容由你自己录入或导入（JSON）<br>
+      30 天未打开的节点会逐渐变暗、连线变细，90 天后隐藏，点开即恢复<br>
+      标注【待补】【未知】的条目保持空缺，未作推测。
+    </div>
+  </aside>
+
+  <main id="stage-wrap">
+    <canvas id="stage"></canvas>
+    <div id="listview"></div>
+    <div id="docview"></div>
+    <div id="tip"></div>
+    <div id="hint">拖动旋转 · 滚轮缩放 · 中键/右键平移 · 单击查看</div>
+    <div id="filetip">
+      <b>当前是本地文件模式（file://）</b>：不连接服务器，显示的是页面内置的精简数据，改动只存在本机浏览器。<br>
+      要看完整数据并保存修改：在 <code>N_Nao</code> 目录运行 <code>node server.js</code>，再打开 <code>http://localhost:8787</code>。
+      <button class="x" id="filetip-x" title="关闭">×</button>
+    </div>
+    <div id="legend">
+      <span><i style="background:#ffe2a0"></i>观测点</span>
+      <span><i style="background:#FF69B4"></i>日记</span>
+      <span><i style="background:#00CED1"></i>日常活动</span>
+      <span><i style="background:#FFA500"></i>身体状态</span>
+      <span><i style="background:#BA55D3"></i>情绪暗流</span>
+      <span><i style="background:#FF4500"></i>人际互动</span>
+      <span><i style="background:#1E90FF"></i>认知沉淀</span>
+      <span><i style="background:#32CD32"></i>未来锚点</span>
+      <span><i style="background:#c084fc"></i>梦境</span>
+    </div>
+  </main>
+
+  <aside id="right">
+    <div class="sel-empty" id="sel-empty"><b>还没有选中节点</b>点击图上的光点，或从检索结果里挑一条。</div>
+    <div id="detail" style="display:none"></div>
+  </aside>
+</div>
+
+<button id="diary-fab" class="diary-fab" type="button" title="写日记并注入星云" aria-label="写日记">📝</button>
+<div id="diary" aria-hidden="true">
+  <div class="d-head">
+    <div>
+      <div class="diary-kicker">DIARY → NEBULA</div>
+      <div class="diary-title">把今天写进星云</div>
+    </div>
+    <button id="diary-close" type="button" title="收起" aria-label="收起日记">×</button>
+  </div>
+  <input id="diary-title" type="text" maxlength="60" placeholder="标题（可留空，自动用日期）" autocomplete="off">
+  <textarea id="diary-text" placeholder="不用分类，不用连线，想到什么写什么。AI 会把它拆成认知网络。"></textarea>
+  <div class="diary-foot">
+    <span id="diary-hint">写完点发射，AI 会提取 2–4 个实体并注入星云。</span>
+    <button id="diary-save" class="btn primary" type="button">发射进入星云</button>
+  </div>
+</div>
+
+<div id="modal">
+  <div class="modal-card">
+    <h3 id="m-title">新增节点</h3>
+    <div class="field"><label>标题</label><input id="f-title" type="text" maxlength="60" placeholder="例如：一个概念"></div>
+    <div class="field"><label>分层</label><select id="f-cat"></select></div>
+    <div class="field"><label>描述</label><textarea id="f-desc" rows="3" placeholder="一句话说明它是什么、起什么作用"></textarea></div>
+    <div class="field"><label>具体内容</label><textarea id="f-content" rows="6" placeholder="详细说明、展开、示例（可留空）"></textarea></div>
+    <div class="field"><label>权重（越高越亮）</label><div class="mrow"><input id="f-w" type="range" min="0.3" max="1" step="0.05" value="0.6"><b id="f-wv">0.60</b></div></div>
+    <div class="field"><label>标记</label><input id="f-flag" type="text" maxlength="10" placeholder="待补 / 未知（可留空）"></div>
+    <div class="mactions"><button class="btn" id="m-cancel">取消</button><button class="btn primary" id="m-save">保存</button></div>
+  </div>
+</div>
+<div id="about" role="dialog" aria-modal="true" aria-labelledby="about-title">
+  <div class="about-card">
+    <button class="about-x" id="about-close" aria-label="关闭">×</button>
+    <div class="about-kicker">MEMORY SEA · MIRROR</div>
+    <h2 id="about-title">记忆海-镜子</h2>
+    <p class="about-lead">这不是一个效率工具，这是一面照见意识结构的镜子。</p>
+
+    <h3>为什么做这个？</h3>
+    <p>起初，只是因为熬了一个难熬的夜班。一天过去，做了很多事，想了很多念头，最后却觉得什么都没留下，仿佛被巨大的虚无感吞噬。</p>
+    <p>我们试过传统的日记、双链笔记、标签管理器，但最后发现，我们只是在做「知识收纳」，而不是在「梳理内心」。于是，有了这片星云。</p>
+
+    <h3>它是什么？</h3>
+    <p><b>不是相册，是镜子：</b>它把你内在不可见的联想网络，外化为可以旋转、可以点亮的星空。</p>
+    <p><b>极简输入，极繁输出：</b>你只需倾倒情绪，AI 会在后台将其裂变为实体节点与因果连线。</p>
+    <p><b>照见你的微观宇宙：</b>中心的观测点（显意识），旋转的星团（日常与情绪），以及暗处未被点亮的孤星（潜意识）。</p>
+
+    <div class="about-warn">
+      <h3>一句忠告</h3>
+      <p>不要为了照镜子而照镜子，更不要为了把玩镜子而照镜子。<br>镜子是用来照的，不是用来盘的。</p>
+      <p>工具只是梯子，用完就要撤。如果你今天觉得很累，或者为了怎么调节点颜色而纠结了半小时，请立刻关掉这个网页，去真实地吃一顿饭，去感受风吹过皮肤，去好好睡一觉。</p>
+      <p>生活本身，才是主产品。</p>
+    </div>
+
+    <blockquote class="about-quote">“只要你还能因为一个绝妙的想法而感到战栗，你的宇宙就依然在运转。”</blockquote>
+
+    <div class="about-foot"><b>Memory Sea - Mirror v2.2.0</b><span>独立开发</span></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ===== 模板配置：换成自己的内容，主要改这里 =====
+  // title / subtitle / version —— 站点名称与页头显示
+  // layers —— 分层顺序、名称、颜色（id 保存过数据后不要再改）
+  // demo —— true 会生成少量示例节点；false 只有观测点和空分层
+  // storageKey / presetKey / tokenKey —— 同一域名部署多份时必须改成不同前缀
+  var TEMPLATE = {
+    title: '记忆海-镜子',
+    subtitle: 'MEMORY SEA · MIRROR',
+    version: 'v2.2.0',
+    hubTitle: '观测点',
+    hubDesc: '整张图的中心，也是「正在观看的那一点」。它不归属任何一层；转动视角时它会轻微偏移，中心跟着观察者走。',
+    exportName: 'memory-nebula',
+    source: '',
+    demo: false,
+    // 突触修剪：多少天未打开开始变暗、多少天后完全隐藏
+    forgetStartDays: 30,
+    forgetHideDays: 90,
+    storageKey: 'nebula.graph.v1',
+    presetKey: 'nebula.preset',
+    tokenKey: 'nebula.token',
+    layers: [
+      // 1. 观测点（中心节点，保持原有 hub 逻辑，不参与分层过滤）
+      { id: 'observer', label: '观测点', color: '#FFD700', isCenter: true },
+      // 2. 日记（主记录节点）
+      { id: 'diary', label: '日记', color: '#FF69B4', desc: '每天写下的碎片日记收在这里；一篇日记会裂变成若干实体，同一天的记录归到同一个日期节点。' },
+      // 3. 日常活动（洗衣服、通勤、做饭、工作等）
+      { id: 'activity', label: '日常活动', color: '#00CED1', desc: '洗衣服、通勤、做饭、工作这些反复发生的日常切片，用来看清时间实际被什么占据。' },
+      // 4. 身体状态（失眠、疲惫、胃疼、运动等）
+      { id: 'body', label: '身体状态', color: '#FFA500', desc: '失眠、疲惫、疼痛、运动等身体信号，是情绪与生活节奏最直接的反馈。' },
+      // 5. 情绪暗流（焦虑、开心、内耗、平静等）
+      { id: 'emotion', label: '情绪暗流', color: '#BA55D3', desc: '焦虑、开心、内耗、平静等感受，记录它们在什么情境里出现，又怎样慢慢退去。' },
+      // 6. 人际互动（家人、同事、朋友等）
+      { id: 'people', label: '人际互动', color: '#FF4500', desc: '家人、同事、朋友以及每一次对话与冲突，标记关系里的温度、距离和边界。' },
+      // 7. 认知沉淀（知识、灵感、感悟、书籍等）
+      { id: 'knowledge', label: '认知沉淀', color: '#1E90FF', desc: '读到的概念、突然的灵感、想明白的道理，沉淀成可以反复调用的认知资产。' },
+      // 8. 未来锚点（目标、计划、期待等）
+      { id: 'goal', label: '未来锚点', color: '#32CD32', desc: '目标、计划与期待，为当下的选择提供方向和优先级。' },
+      // 9. 梦境（梦里的场景、人物与反复出现的主题）
+      { id: 'dream', label: '梦境', color: '#c084fc', desc: '梦境是睡眠中浮现的影像、情绪与叙事；把它当作可观察的体验，记录反复出现的地点、人物和感受。' }
+    ]
+  };
+  var CATS = { hub: { label: TEMPLATE.hubTitle, color: '#ffe2a0' } };
+  // isCenter 层只用于中心节点（hub）的标题与配色，不进入左侧分层与分组节点
+  var LAYERS = [];
+  TEMPLATE.layers.forEach(function (l) {
+    if (l.isCenter) {
+      CATS.hub = { label: l.label || TEMPLATE.hubTitle, color: l.color || '#ffe2a0' };
+      return;
+    }
+    CATS[l.id] = { label: l.label, color: l.color };
+    LAYERS.push(l.id);
+  });
+  var CODE_CATS = {};
+  // 分层介绍：TEMPLATE.layers 里的 desc，选中分层时显示在右侧详情
+  var LAYER_INTRO = {};
+  TEMPLATE.layers.forEach(function (l) {
+    if (l.id && l.desc) LAYER_INTRO[l.id] = l.desc;
+  });
+  // AI 自动提取的实体描述过于机械，按所在分层替换成带图标的氛围文案
+  var LAYER_MOOD = {
+    diary: '📝 心绪切片',
+    activity: '🌿 日常轨迹',
+    body: '🫀 生理回响',
+    emotion: '💭 情绪共鸣',
+    people: '🫂 关系回声',
+    knowledge: '✨ 灵感碎片',
+    goal: '🧭 方向锚点',
+    dream: '🌙 潜意识残影'
+  };
+  var AUTO_ENTITY_DESC = /^由日记自动提取的实体。?$/;
+  function moodDesc(n) {
+    if (!n) return '';
+    var d = n.desc || '';
+    if (d && !AUTO_ENTITY_DESC.test(d)) return d;
+    return LAYER_MOOD[n.cat] || d;
+  }
+
+  // 梦境层的内容：一篇「梦」节点，附带可展开的具体内容
+  var DREAM_ITEMS = [[
+    '梦',
+    '睡眠中浮现的场景、人物与情绪；醒来后先记下第一感受，再回看它和现实里什么事有关。',
+    0.9,
+    '可记录：梦里的地点、出现的人、发生的事、最强烈的情绪，以及醒来后的第一感受。\n\n'
+  + '长期回看会看到反复出现的主题，例如压力、没完成的事、最近的牵挂。梦不是预言，更适合当作自我观察的素材。'
+  ]];
+  var DREAM_COMPOSED = {};
+
+  document.title = TEMPLATE.title;
+  (function () {
+    var b = document.querySelector('.brand b');
+    var s = document.querySelector('.brand span');
+    if (b) b.textContent = TEMPLATE.title;
+    if (s) s.textContent = TEMPLATE.subtitle + ' · ' + TEMPLATE.version;
+  })();
+
+  var nodes = [];
+  var edges = [];
+  var byTitle = {};
+  var byId = {};
+
+  function mkNode(cat, title, desc, w, extra) {
+    var n = {
+      id: (extra && extra.id) ? extra.id : ('n' + (nodes.length + 1)),
+      title: title,
+      cat: cat,
+      desc: desc || '',
+      w: (w == null ? 0.55 : w),
+      isGroup: false,
+      la: Date.now(),
+      x: 0, y: 0, z: 0,
+      tx: 0, ty: 0, tz: 0,
+      vx: 0, vy: 0, vz: 0,
+      tokens: null
+    };
+    if (extra) for (var k in extra) n[k] = extra[k];
+    nodes.push(n);
+    byTitle[title] = n;
+    byId[n.id] = n;
+    return n;
+  }
+
+  var hub = mkNode('hub', TEMPLATE.hubTitle, TEMPLATE.hubDesc, 1, { isGroup: false, pinned: true, id: 'hub' });
+
+  function layer(cat, items) {
+    var g = mkNode(cat, CATS[cat].label, LAYER_INTRO[cat] || '这一层的分组节点。', 0.95, { isGroup: true, id: 'g_' + cat });
+    edges.push({ a: hub, b: g, type: 'controls' });
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      var n = mkNode(cat, it[0], it[1], it[2] == null ? 0.55 : it[2], it[3]);
+      edges.push({ a: n, b: g, type: 'part_of' });
+    }
+    return g;
+  }
+
+  function link(a, b, type) {
+    if (!a || !b || a === b) return;
+    edges.push({ a: a, b: b, type: type || 'relates' });
+  }
+
+  // ---------- 内容 ----------
+  // demo: false 时不会执行；要加内容，按 [标题, 描述, 权重, 附加字段] 写进 layer 即可
+  if (TEMPLATE.demo) {
+    layer('diary', [
+      ['第一则日记', '在右下角点 📝 写下的第一篇。', 0.8]
+    ]);
+    layer('activity', [
+      ['一件日常小事', '洗衣服、通勤、做饭之类的生活切片。', 0.7]
+    ]);
+    layer('body', [
+      ['一种身体信号', '失眠、疲惫或某个部位的不适。', 0.7]
+    ]);
+    layer('emotion', [
+      ['一种反复出现的感受', '它常在类似的场景里回来。', 0.6]
+    ]);
+    layer('people', [
+      ['重要的人', '一段关系的名字。', 0.75]
+    ]);
+    layer('knowledge', [
+      ['一条有用的概念', '一个可以复用的想法。', 0.6]
+    ]);
+    layer('goal', [
+      ['正在做的事', '几个月内想推进的目标。', 0.8]
+    ]);
+  } else {
+    // 空白模板：只有观测点和空分层，内容由使用者自己录入或导入
+    LAYERS.forEach(function (c) { layer(c, []); });
+  }
+
+  // 梦境层固定带一个「梦」节点，附具体内容可展开阅读
+  if (LAYERS.indexOf('dream') >= 0) {
+    var dreamGroup = byId['g_dream'];
+    if (!dreamGroup) {
+      dreamGroup = mkNode('dream', CATS.dream.label, LAYER_INTRO.dream || '梦境的分组节点。', 0.95, { isGroup: true, id: 'g_dream' });
+      edges.push({ a: hub, b: dreamGroup, type: 'controls' });
+    }
+    if (!byTitle[DREAM_ITEMS[0][0]]) {
+      var dreamNode = mkNode('dream', DREAM_ITEMS[0][0], DREAM_ITEMS[0][1], DREAM_ITEMS[0][2], { content: DREAM_ITEMS[0][3] });
+      edges.push({ a: dreamNode, b: dreamGroup, type: 'part_of' });
+    }
+  }
+  renderLegend();
+
+  // ---------- 本地存档 ----------
+  var STORE_KEY = TEMPLATE.storageKey;
+  var PRESET_KEY = TEMPLATE.presetKey;
+  var preset = 'lite';
+  var demoMode = false;
+  try { preset = safeGet(PRESET_KEY) === 'full' ? 'full' : 'lite'; } catch (e) {}
+  if (!TEMPLATE.demo) preset = 'lite';
+  function keyFor(name) { return STORE_KEY + ':' + name; }
+  function presetKey() { return keyFor(preset); }
+  function safeGet(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
+  function safeSet(k, v) { try { window.localStorage.setItem(k, v); return true; } catch (e) { return false; } }
+  var canFetch = typeof fetch === 'function' && /^https?:/i.test((window.location && window.location.protocol) || '');
+  var WRITE_TOKEN = '';
+  try {
+    var tokenMatch = ((window.location && window.location.search) || '').match(/token=([^&]+)/);
+    if (tokenMatch) {
+      WRITE_TOKEN = decodeURIComponent(tokenMatch[1]);
+      safeSet(TEMPLATE.tokenKey, WRITE_TOKEN);
+    } else {
+      WRITE_TOKEN = safeGet(TEMPLATE.tokenKey) || '';
+    }
+  } catch (e) {}
+
+  function snapshot() {
+    var snap = {
+      v: 1,
+      savedAt: new Date().toISOString(),
+      layers: LAYERS.map(function (c) { return { id: c, label: CATS[c].label, color: CATS[c].color }; }),
+      nodes: nodes.map(function (n) {
+        return { id: n.id, title: n.title, desc: n.desc, content: n.content || null, cat: n.cat, w: n.w, g: n.isGroup ? 1 : 0, m: n.isMeta ? 1 : null, f: n.flag || null, la: n.la || null };
+      }),
+      edges: edges.map(function (e) {
+        return e.label ? [e.a.id, e.b.id, e.type, e.label] : [e.a.id, e.b.id, e.type];
+      })
+    };
+    if (preset === 'full') snap.rev = FULL_REV;
+    return snap;
+  }
+
+  function restoreSnapshot(s) {
+    if (!s || !s.nodes || !s.nodes.length) return false;
+    var savedAtMs = Date.parse(s.savedAt || '') || Date.now();
+    if (Array.isArray(s.layers) && s.layers.length) {
+      Object.keys(CATS).forEach(function (k) { if (k !== 'hub') delete CATS[k]; });
+      LAYERS.length = 0;
+      s.layers.forEach(function (l) {
+        if (!l || !l.id) return;
+        LAYERS.push(l.id);
+        CATS[l.id] = { label: l.label || l.id, color: l.color || '#9fb0d0' };
+      });
+    }
+    var ns = [], ids = {}, titles = {}, ok = true;
+    s.nodes.forEach(function (o) {
+      if (!o || !o.id || !o.title || !CATS[o.cat]) { ok = false; return; }
+      var n = {
+        id: o.id, title: o.title, desc: o.desc || '', content: o.content || '', cat: o.cat,
+        w: o.w == null ? 0.55 : o.w, isGroup: !!o.g, isMeta: !!o.m, flag: o.f || undefined,
+        la: (typeof o.la === 'number' && o.la > 0) ? o.la : savedAtMs,
+        x: 0, y: 0, z: 0, tx: 0, ty: 0, tz: 0, vx: 0, vy: 0, vz: 0, tokens: null
+      };
+      ns.push(n); ids[n.id] = n; titles[n.title] = n;
+    });
+    if (!ok || !ids['hub']) return false;
+    var es = [];
+    (s.edges || []).forEach(function (t) {
+      if (!Array.isArray(t)) return;
+      var a = ids[t[0]], b = ids[t[1]];
+      if (a && b && a !== b) es.push({ a: a, b: b, type: t[2] || 'relates', label: t[3] || null });
+    });
+    nodes = ns; edges = es; byId = ids; byTitle = titles; hub = ids['hub'];
+    // 旧存档里的「中枢控制 / 中枢」统一迁移为「观测点」
+    if (hub.title.indexOf('中枢') >= 0) {
+      hub.title = '观测点';
+      if (hub.desc && hub.desc.indexOf('调度中枢') >= 0) {
+        hub.desc = '整台 N脑 的中心点，同时也是「正在观看的那一点」：它不归属任何一层，只决定哪些层、在什么条件下被激活。转动视角时它会轻微偏移，中心跟着观察者走。';
+      }
+      byTitle[hub.title] = hub;
+    }
+    migrateDreamLayer();
+    syncDreamMeta();
+    migrateDiaryLayer();
+    syncLayerIntros();
+    renderLegend();
+    return true;
+  }
+
+  // 日记层：新存档用 diary；旧存档若已有名为「日记」的自定义层则直接复用
+  function diaryLayerId() {
+    if (CATS.diary) return 'diary';
+    for (var i = 0; i < LAYERS.length; i++) {
+      if (CATS[LAYERS[i]] && CATS[LAYERS[i]].label === '日记') return LAYERS[i];
+    }
+    return 'diary';
+  }
+
+  function migrateDiaryLayer() {
+    if (!hub) return;
+    var cat = diaryLayerId();
+    if (cat !== 'diary') return; // 复用已有的「日记」层
+    if (LAYERS.indexOf('diary') >= 0) return;
+    CATS.diary = { label: '日记', color: '#FFD700' };
+    LAYERS.push('diary');
+    var g = mkNode('diary', '日记', LAYER_INTRO.diary || '日记自动裂变内容的归集层。', 0.95, { isGroup: true, id: 'g_diary' });
+    edges.push({ a: hub, b: g, type: 'controls' });
+  }
+
+  // 旧存档的分层介绍还是占位文案时，替换成 TEMPLATE 里的新介绍（不覆盖用户手动改过的描述）
+  var LAYER_DESC_PLACEHOLDER = { '这一层的分组节点。': 1, '日记自动裂变内容的归集层。': 1 };
+  function syncLayerIntros() {
+    LAYERS.forEach(function (cat) {
+      var g = byId['g_' + cat];
+      if (!g || !LAYER_INTRO[cat]) return;
+      if (!g.desc || LAYER_DESC_PLACEHOLDER[g.desc]) g.desc = LAYER_INTRO[cat];
+    });
+  }
+
+  // 旧存档没有「梦境」层时补建，并把梦境相关条目迁移过来
+  function migrateDreamLayer() {
+    if (LAYERS.indexOf('dream') >= 0 || !hub || !DREAM_ITEMS) return;
+    CATS.dream = { label: '梦境', color: '#c084fc' };
+    var at = LAYERS.indexOf('pot');
+    LAYERS.splice(at >= 0 ? at + 1 : LAYERS.length, 0, 'dream');
+    var g = mkNode('dream', CATS.dream.label, '这一层的分组节点。', 0.95, { isGroup: true, id: 'g_dream' });
+    edges.push({ a: hub, b: g, type: 'controls' });
+    DREAM_ITEMS.forEach(function (it) {
+      var n = byTitle[it[0]];
+      if (n) {
+        n.cat = 'dream';
+        if (it[3]) n.content = it[3];
+        edges = edges.filter(function (e) { return !(e.a === n && e.type === 'part_of'); });
+      } else {
+        n = mkNode('dream', it[0], it[1], it[2], { content: it[3] || null });
+      }
+      edges.push({ a: n, b: g, type: 'part_of' });
+    });
+    Object.keys(DREAM_COMPOSED).forEach(function (t) {
+      var n = byTitle[t];
+      DREAM_COMPOSED[t].forEach(function (to) {
+        if (n && byTitle[to]) link(n, byTitle[to], 'composed_of');
+      });
+    });
+  }
+
+  // 旧存档已带 dream 层时：统一改名为「梦境」，同步新释义并补齐新增条目
+  function syncDreamMeta() {
+    if (LAYERS.indexOf('dream') < 0 || !DREAM_ITEMS || !CATS.dream || !hub) return;
+    CATS.dream.label = '梦境';
+    var g = byId['g_dream'];
+    if (g) { g.title = '梦境'; byTitle['梦境'] = g; }
+    DREAM_ITEMS.forEach(function (it) {
+      var n = byTitle[it[0]];
+      if (n && !n.isGroup) {
+        n.cat = 'dream';
+        n.desc = it[1];
+        n.w = it[2];
+        if (it[3]) n.content = it[3];
+      } else if (!n && g) {
+        n = mkNode('dream', it[0], it[1], it[2], { content: it[3] || null });
+        edges.push({ a: n, b: g, type: 'part_of' });
+      }
+    });
+  }
+
+  // ---------- 全量版内容生成 ----------
+  var FULL_REV = 3;
+  var FULL_OPEN = {
+    hub: '观测点是整张图的中心点，也是观看的位置：它不生产具体内容，只决定哪些层、在什么条件下被激活。',
+    core: '这是 N脑 的本质条目，属于体系成立的前提。',
+    system: '这是系统层条目，描述 N脑 由哪些部件构成、部件之间如何调度。',
+    tgh: '这是能力层 .tgh 的条目，回答「能做什么」。',
+    aht: '这是思维层 .aht 的条目，回答「怎么想、按什么顺序处理」。',
+    rcl: '这是记忆层 .rcl 的条目，负责写入、保存与提取。',
+    pot: '这是潜能层条目，是由多种能力、记忆与数据合成后的高阶表现。',
+    dream: '这是梦境层条目，依据梦境心理学、清明梦训练与睡眠神经科学，并标出《盗梦空间》等影视设定中哪些有实证、哪些没有。',
+    data: '这是数据库层条目，保存可供上层读取的原始素材与结构。',
+    note: '这是备注层条目，记录尚未并入正式体系的观察与待验证项。'
+  };
+  var FULL_USE = {
+    hub: '使用时先看它发出的控制线：一条线对应一个分层；观测点不直接参与执行，因此改动观测点等于改动整台 N脑 的调度顺序。',
+    core: '这些本质不直接执行任务，而是用来判断一条设定是否成立：任何功能最终都要能回溯到它们的组合。',
+    system: '系统层描述结构怎么搭、部件怎么连；改这里影响的是整台 N脑 的运行方式，而不是单个能力。',
+    tgh: '调用能力时要同时看清输入、输出与代价；能力本身不包含动机，动机由思维层给出。',
+    aht: '同一种能力配不同思维模块会得到不同结果；思维层决定信息被拆解、比较、重组的顺序。',
+    rcl: '写入决定留下什么，提取决定当前能想起什么；没有记忆层，能力与思维每次都要从零开始。',
+    pot: '潜能不是单独训练的产物，而是几种组件在特定条件下临时合成；条件撤掉，潜能退回原来的层级。',
+    dream: '使用梦境层时，把它当作可训练的体验而非玄幻能力：清明梦可练、梦内交流有实验支持，共享梦境与梦中时间换算没有实证。',
+    data: '数据层不参与判断，只负责可被取用；它的价值取决于上层能否稳定地读与写。',
+    note: '备注可以随时被提升为正式节点，也可以长期留在边缘，作为尚未验证的线索。'
+  };
+
+  function fullList(a) {
+    var out = [];
+    for (var i = 0; i < a.length && i < 4; i++) out.push('「' + a[i] + '」');
+    if (a.length > 4) out.push('等 ' + a.length + ' 项');
+    return out.join(a.length > 4 ? '' : '、');
+  }
+
+  var LAYER_PURPOSE = {
+    core: '它存放整个体系的公理、源代码与不可再分的本质，是其他层判断对错的最终依据。',
+    system: '它描述 N脑 的组成部件、运行顺序与资源如何被调度，是整台机器的结构图。',
+    tgh: '它收纳可以直接调用的能力，每一项都对应一种可执行的「能做什么」。',
+    aht: '它收纳处理信息的方式，决定感知、比较、推理与表达按什么顺序发生。',
+    rcl: '它负责记忆的写入、保存与提取，让能力与思维不必每次从零开始。',
+    pot: '它收纳由多种组件合成的高阶表现，这些表现依赖条件成立，条件撤掉就会退回原来的层级。',
+    data: '它保存图像、音色、行为、思维与潜能等原始素材，供上层按需读取。',
+    note: '它收纳尚未并入正式体系的观察、猜测与待验证项，可以随时被提升或删除。'
+  };
+
+  function layerFull(n, base, titles) {
+    var members = [];
+    base.edges.forEach(function (e) {
+      if (e[2] === 'part_of' && e[1] === n.id) members.push(titles[e[0]]);
+    });
+    var purpose = LAYER_PURPOSE[n.cat] || '它收纳作者新增的同类条目，与原有分层并列，由观测点直接调度。';
+    var s = '「' + n.title + '」是 N脑 的一个分层。' + purpose;
+    if (n.desc && n.desc !== '这一层的分组节点。') s += '\n\n' + n.desc;
+    s += '\n\n当前层内有 ' + members.length + ' 个节点' + (members.length ? '：' + fullList(members) + '。' : '。');
+    s += '\n\n在星云视图中，这一层从观测点向外展开；层内节点通过 part_of 归入，层与层之间用跨层关联相互引用。';
+    return s;
+  }
+
+  function nodeFull(n, base, titles, labels) {
+    var s = '';
+    var layerName = labels[n.cat] || '';
+    if (n.f === '待补') s += '【待补】原文尚未给出定义，以下只按它在体系中的位置作结构性说明，具体含义待作者补充。\n\n';
+    s += FULL_OPEN[n.cat] || ('这是「' + (layerName || '自定义') + '」层的条目。');
+    if (n.desc) s += '\n\n' + n.desc;
+    var parts = [], fedBy = [], feedsTo = [];
+    base.edges.forEach(function (e) {
+      if (e[0] === n.id && e[2] === 'composed_of') parts.push(titles[e[1]]);
+      if (e[1] === n.id && e[2] === 'feeds') fedBy.push(titles[e[0]]);
+      if (e[0] === n.id && e[2] === 'feeds') feedsTo.push(titles[e[1]]);
+    });
+    var rel = [];
+    if (parts.length) rel.push('构成上，它由' + fullList(parts) + '组合而成，单独拆开只保留局部效果');
+    if (fedBy.length) rel.push('运行时它依赖' + fullList(fedBy) + '提供的素材，素材断供时这一项会退化或失效');
+    if (feedsTo.length) rel.push('它又为' + fullList(feedsTo) + '提供底层素材');
+    if (rel.length) s += '\n\n' + rel.join('；') + '。';
+    s += '\n\n' + (FULL_USE[n.cat] || ('它属于「' + (layerName || '自定义') + '」层，需要和同层及相邻层的条目一起看。'));
+    return s;
+  }
+
+  function buildFull(base) {
+    var snap = JSON.parse(JSON.stringify(base));
+    var titles = {}, labels = {};
+    snap.nodes.forEach(function (n) {
+      titles[n.id] = n.title;
+      if (n.g) labels[n.cat] = n.title;
+    });
+    snap.nodes.forEach(function (n) {
+      n.content = n.g ? layerFull(n, snap, titles) : nodeFull(n, snap, titles, labels);
+    });
+    snap.savedAt = new Date().toISOString();
+    snap.rev = FULL_REV;
+    return snap;
+  }
+
+  try {
+    var savedRaw = safeGet(presetKey());
+    if (!savedRaw && preset === 'lite') savedRaw = safeGet(STORE_KEY);
+    if (savedRaw) {
+      var savedObj = JSON.parse(savedRaw);
+      if (preset === 'full' && savedObj.rev !== FULL_REV) savedObj = null;
+      if (savedObj) {
+        restoreSnapshot(savedObj);
+        window.__NNAO_LOADED_SAVE__ = true;
+      }
+    }
+  } catch (e) {}
+
+  // ---------- 分词与检索 ----------
+  var STOP = {};
+  ('的 了 是 我 你 他 她 它 们 吗 呢 吧 啊 呀 嘛 这 那 有 和 与 就 都 也 还 要 会 能 可 去 来 说 做 用 个 把 被 给 让 对 从 到 里 上 下 中 过 很 再 又 才 只 着 得 地 不 没 the a an is are to of and in on for it this that with').split(' ').forEach(function (w) { STOP[w] = 1; });
+  var WEAK = '的了是在和与就都也很着过把被给让对从到呢吗吧啊呀哦嗯这那我你他她它们之而或与'.split('');
+
+  function norm(s) {
+    return String(s || '').replace(/[！-～]/g, function (c) {
+      return String.fromCharCode(c.charCodeAt(0) - 0xfee0);
+    }).toLowerCase();
+  }
+  function tokenize(text) {
+    var out = {};
+    var s = norm(text).replace(/[\u3000\s]+/g, ' ');
+    var m;
+    var re = /[a-z0-9_]{2,}/g;
+    while ((m = re.exec(s))) if (!STOP[m[0]]) out[m[0]] = 1;
+    var flat = s.replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '');
+    for (var i = 0; i + 1 < flat.length; i++) {
+      var p = flat.slice(i, i + 2);
+      if (STOP[p] || WEAK.indexOf(p.charAt(0)) >= 0 || WEAK.indexOf(p.charAt(1)) >= 0) continue;
+      out[p] = 1;
+    }
+    return Object.keys(out);
+  }
+
+  var df = {};
+  var N_DOC = nodes.length;
+  function buildIndex() {
+    df = {};
+    N_DOC = nodes.length;
+    nodes.forEach(function (n) {
+      var t = tokenize(n.title + ' ' + n.desc + ' ' + (n.content || '') + ' ' + CATS[n.cat].label);
+      n.tokens = t;
+      for (var i = 0; i < t.length; i++) df[t[i]] = (df[t[i]] || 0) + 1;
+    });
+  }
+  buildIndex();
+  function idf(t) { return Math.log(1 + (N_DOC + 1) / ((df[t] || 0) + 1)); }
+
+  var SYN = { '幻视': ['视觉化'], '视觉化': ['幻视'], 'tgh': ['能力'], 'aht': ['思维'], 'rcl': ['记忆'], 'dat': ['数据库'], '序列': ['思维段'], '超识': ['多重意识'], '潜能': ['合成'], '观测点': ['中心', '观察者', '中枢'], '中枢': ['观测点', '中心'] };
+
+  function search(q) {
+    var qt = tokenize(q);
+    if (!qt.length) return null;
+    var expanded = {};
+    qt.forEach(function (t) {
+      expanded[t] = 1;
+      (SYN[t] || []).forEach(function (s) { expanded[s] = 1; });
+    });
+    var terms = Object.keys(expanded);
+    var hits = [];
+    nodes.forEach(function (n) {
+      if (hidden[n.cat]) return;
+      var score = 0;
+      var matched = [];
+      var nt = n.tokens || [];
+      for (var i = 0; i < terms.length; i++) {
+        var t = terms[i];
+        var w = idf(t);
+        var s = 0;
+        if (n.title.indexOf(t) >= 0) s += 6 * w;
+        if (n.desc.indexOf(t) >= 0) s += 1.5 * w;
+        if (nt.indexOf(t) >= 0) s += 4 * w;
+        if (CATS[n.cat].label.indexOf(t) >= 0) s += 2 * w;
+        if (s > 0) { score += s; matched.push(t); }
+      }
+      if (score > 0) hits.push({ n: n, score: score, matched: matched });
+    });
+    hits.sort(function (a, b) { return b.score - a.score; });
+    var max = hits.length ? hits[0].score : 0;
+    var cut = max * 0.42;
+    hits = hits.filter(function (h, i) { return i < 1 || h.score >= cut; });
+    return { q: q, hits: hits.slice(0, 60), max: max, terms: terms };
+  }
+
+  // ---------- 状态 ----------
+  var cam = { yaw: -0.62, pitch: 0.2, zoom: 1, dist: 2.7, px: 0, py: 0 };
+  // 旋转围绕的固定点：选中某个节点后，视角以该节点为中心
+  var pivot = { x: 0, y: 0, z: 0 };
+  var recenterPan = false;
+  var state = {
+    view: 'nebula',
+    selected: null,
+    roamOn: false,
+    roamNode: null,
+    roamLitAt: 0,
+    nextRoamAt: 0,
+    hover: null,
+    search: null,
+    hidden: {},
+    size: 1.15,
+    showLabels: true,
+    allLabels: false,
+    showRelates: true,
+    autoRotate: true,
+    prune: true
+  };
+  var hidden = state.hidden;
+
+  var canvas = document.getElementById('stage');
+  var ctx = canvas.getContext('2d');
+  var wrap = document.getElementById('stage-wrap');
+  var leftPanel = document.getElementById('left');
+  document.getElementById('menu').addEventListener('click', function () {
+    leftPanel.classList.toggle('open');
+  });
+
+  // 左右侧栏收起 / 展开
+  var appEl = document.getElementById('app');
+  var btnPaneLeft = document.getElementById('toggle-left');
+  var btnPaneRight = document.getElementById('toggle-right');
+
+  function updatePaneBtns() {
+    var mobile = window.innerWidth <= 720;
+    var narrow = window.innerWidth <= 1080;
+    var rightPanel = document.getElementById('right');
+    var lHidden = mobile ? !leftPanel.classList.contains('open') : appEl.classList.contains('hide-left');
+    var rHidden = narrow ? !rightPanel.classList.contains('open') : appEl.classList.contains('hide-right');
+    var lLabel = lHidden ? '展开左侧栏' : '收起左侧栏';
+    var rLabel = rHidden ? '展开右侧栏' : '收起右侧栏';
+    btnPaneLeft.textContent = lHidden ? '▶' : '◀';
+    btnPaneLeft.title = lLabel;
+    btnPaneLeft.setAttribute('aria-label', lLabel);
+    btnPaneRight.textContent = rHidden ? '◀' : '▶';
+    btnPaneRight.title = rLabel;
+    btnPaneRight.setAttribute('aria-label', rLabel);
+  }
+
+  btnPaneLeft.addEventListener('click', function () {
+    if (window.innerWidth <= 720) leftPanel.classList.toggle('open');
+    else appEl.classList.toggle('hide-left');
+    resize();
+    updatePaneBtns();
+  });
+
+  btnPaneRight.addEventListener('click', function () {
+    var rightPanel = document.getElementById('right');
+    if (window.innerWidth <= 1080) rightPanel.classList.toggle('open');
+    else appEl.classList.toggle('hide-right');
+    resize();
+    updatePaneBtns();
+  });
+
+  var W = 1, H = 1, DPR = 1;
+
+  function resize() {
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    W = wrap.clientWidth;
+    H = wrap.clientHeight;
+    canvas.width = Math.max(1, Math.floor(W * DPR));
+    canvas.height = Math.max(1, Math.floor(H * DPR));
+    buildBackground();
+  }
+  window.addEventListener('resize', function () { resize(); updatePaneBtns(); });
+
+  // 布局目标
+  function layoutGalaxy() {
+    var items = {};
+    nodes.forEach(function (n) { if (!n.isGroup) (items[n.cat] = items[n.cat] || []).push(n); });
+    var innerCount = Math.ceil(LAYERS.length / 2);
+    LAYERS.forEach(function (cat, ci) {
+      var g = byId['g_' + cat];
+      var inner = ci < innerCount;
+      var idx = inner ? ci : ci - innerCount;
+      var num = inner ? innerCount : Math.max(1, LAYERS.length - innerCount);
+      // 行星轨道：内外两圈，圈间距足够大，避免卫星圈互相压住
+      g.oR = inner ? 1.05 : 1.62;
+      g.oA = -Math.PI / 2 + idx / num * Math.PI * 2 + (inner ? 0 : Math.PI / num);
+      g.oW = inner ? 0.15 : 0.10;
+      g.tx = Math.cos(g.oA) * g.oR;
+      g.ty = 0;
+      g.tz = Math.sin(g.oA) * g.oR;
+      var list = items[cat] || [];
+      // 星云视图里节点较多时，把卫星铺成一个三维星团，而不是挤在同一个平面圆环上
+      var cloud = state.view === 'nebula' && list.length > 24;
+      var sRs = [];
+      g.sRs = sRs;
+      if (cloud) {
+        var Rmax = 0.1 + 0.018 * Math.sqrt(list.length);
+        for (var bj = 0; bj < list.length; bj++) {
+          var bn = list[bj];
+          var bu = (bj + 0.5) / list.length;
+          var br = 0.05 + (Rmax - 0.05) * Math.cbrt(bu);
+          var bphi = Math.acos(1 - 2 * bu);
+          var btheta = Math.PI * (1 + Math.sqrt(5)) * bj;
+          bn.mR = br;
+          bn.ring = 1;
+          bn.mA = btheta;
+          bn.mW = 0.5;
+          bn.mZ = 0;
+          bn.tx = g.tx + br * Math.sin(bphi) * Math.cos(btheta);
+          bn.ty = br * Math.cos(bphi) * 0.72;
+          bn.tz = g.tz + br * Math.sin(bphi) * Math.sin(btheta);
+        }
+      } else {
+        // 卫星轨道：按条目数量分成 1–3 圈，形成嵌套轨道环绕
+        var rings = Math.max(1, Math.min(3, Math.ceil(list.length / 6)));
+        var per = Math.ceil(list.length / rings);
+        for (var ri = 0; ri < rings; ri++) {
+          var rr = 0.13 + ri * 0.05;
+          sRs.push(rr);
+          var start = ri * per;
+          var cnt = Math.min(per, list.length - start);
+          for (var j = 0; j < cnt; j++) {
+            var n = list[start + j];
+            n.mR = rr;
+            n.ring = ri;
+            n.mA = ci * 0.9 + ri * 0.5 + j / Math.max(1, cnt) * Math.PI * 2;
+            n.mW = 0.5;
+            n.mZ = ((j % 3) - 1) * 0.015;
+            n.tx = g.tx + Math.cos(n.mA) * n.mR;
+            n.ty = (j % 3 - 1) * 0.015;
+            n.tz = g.tz + Math.sin(n.mA) * n.mR;
+          }
+        }
+      }
+    });
+    hub.tx = 0; hub.ty = 0; hub.tz = 0;
+  }
+
+  // 观测点随视角轻微偏移：星云下中心跟随视角；小银河固定在原点，避免中心乱动
+  function hubDrift() {
+    var k = state.view === 'galaxy' ? 0 : 0.085;
+    hub.x = Math.sin(cam.yaw) * k;
+    hub.y = -Math.sin(cam.pitch) * k * 0.85;
+    hub.z = -(1 - Math.cos(cam.yaw)) * k * 0.6;
+  }
+
+  // 小银河视图：卫星绕行星、行星绕观测点的实时轨道位置
+  function updateOrbits(t) {
+    if (state.view !== 'galaxy') return;
+    var ci, i, g, n, a, mr, hx = hub.x, hy = hub.y, hz = hub.z;
+    for (ci = 0; ci < LAYERS.length; ci++) {
+      g = byId['g_' + LAYERS[ci]];
+      if (!g) continue;
+      a = (g.oA || 0) + t * (g.oW || 0);
+      g.x = hx + Math.cos(a) * (g.oR || 0.4);
+      g.y = hy + Math.sin(a * 1.6) * 0.03;
+      g.z = hz + Math.sin(a) * (g.oR || 0.4);
+    }
+    for (i = 0; i < nodes.length; i++) {
+      n = nodes[i];
+      if (n.isGroup || n === hub) continue;
+      g = byId['g_' + n.cat];
+      if (!g || !g.oR) continue;
+      a = (n.mA || 0) + t * (n.mW || 0);
+      mr = n.mR || 0.07;
+      n.x = g.x + Math.cos(a) * mr;
+      n.y = g.y + (n.mZ || 0) + Math.sin(a) * 0.02;
+      n.z = g.z + Math.sin(a) * mr;
+    }
+  }
+
+  function layoutCluster() {
+    var items = {};
+    nodes.forEach(function (n) { if (!n.isGroup) (items[n.cat] = items[n.cat] || []).push(n); });
+    LAYERS.forEach(function (cat, ci) {
+      var ang = -Math.PI / 2 + ci * 2 * Math.PI / LAYERS.length;
+      var cx = Math.cos(ang) * 0.72, cy = Math.sin(ang) * 0.72;
+      var g = byId['g_' + cat];
+      g.tx = cx; g.ty = cy; g.tz = 0;
+      var list = items[cat] || [];
+      for (var i = 0; i < list.length; i++) {
+        var tier = Math.floor(i / 12);
+        var inTier = list.length - tier * 12;
+        var count = Math.min(12, inTier);
+        var a = (i % 12) / count * Math.PI * 2;
+        var r = 0.17 + tier * 0.16;
+        list[i].tx = cx + Math.cos(a) * r;
+        list[i].ty = cy + Math.sin(a) * r;
+        list[i].tz = (i % 3 - 1) * 0.03;
+      }
+    });
+    hub.tx = 0; hub.ty = 0; hub.tz = 0;
+  }
+
+  function applyLayout() {
+    if (state.view === 'galaxy') layoutGalaxy();
+    else if (state.view === 'cluster') layoutCluster();
+    else if (state.view === 'nebula') { layoutGalaxy(); }
+    nodes.forEach(function (n) {
+      n.vx = n.vy = n.vz = 0;
+      if (state.view !== 'nebula') {
+        n.x = n.x * 0.7 + n.tx * 0.3;
+        n.y = n.y * 0.7 + n.ty * 0.3;
+        n.z = n.z * 0.7 + n.tz * 0.3;
+      }
+    });
+    settleFrames = 0;
+  }
+
+  var settleFrames = 0;
+  var energy = 0;
+
+  function physics() {
+    if (state.view !== 'nebula') return;
+    if (settleFrames > 420) return;
+    settleFrames++;
+    var n = nodes.length;
+    var i, j, a, b, dx, dy, dz, d2, d, f;
+    var big = n > 400;
+    energy = 0;
+    // 节点过多时跳过两两斥力：上千个节点挤在同一轨道，斥力会把整张图炸飞到屏幕外
+    if (!big) {
+      for (i = 0; i < n; i++) {
+        a = nodes[i];
+        for (j = i + 1; j < n; j++) {
+          b = nodes[j];
+          dx = a.x - b.x; dy = a.y - b.y; dz = (a.z - b.z) * 0.6;
+          d2 = dx * dx + dy * dy + dz * dz + 0.004;
+          if (d2 > 1.1) continue;
+          f = 0.0045 / d2;
+          var dd = Math.sqrt(d2);
+          dx /= dd; dy /= dd; dz /= dd;
+          a.vx += dx * f; a.vy += dy * f; a.vz += dz * f;
+          b.vx -= dx * f; b.vy -= dy * f; b.vz -= dz * f;
+        }
+      }
+    }
+    var springK = big ? 0.0008 : 0.014;
+    for (i = 0; i < edges.length; i++) {
+      a = edges[i].a; b = edges[i].b;
+      dx = b.x - a.x; dy = b.y - a.y; dz = b.z - a.z;
+      d = Math.sqrt(dx * dx + dy * dy + dz * dz) + 1e-6;
+      f = (d - 0.16) * springK;
+      dx /= d; dy /= d; dz /= d;
+      a.vx += dx * f; a.vy += dy * f; a.vz += dz * f;
+      b.vx -= dx * f; b.vy -= dy * f; b.vz -= dz * f;
+    }
+    for (i = 0; i < n; i++) {
+      a = nodes[i];
+      if (a === hub) continue;
+      a.vx += (a.tx - a.x) * 0.0025;
+      a.vy += (a.ty - a.y) * 0.0025;
+      a.vz += (a.tz - a.z) * 0.0025;
+      a.vx *= 0.94; a.vy *= 0.94; a.vz *= 0.94;
+      a.x += a.vx; a.y += a.vy; a.z += a.vz;
+      energy += Math.abs(a.vx) + Math.abs(a.vy);
+    }
+    hub.x = 0; hub.y = 0; hub.z = 0;
+    if (energy < 0.02 && settleFrames > 200) settleFrames = 421;
+  }
+
+  // 打开页面/切换视图时先静默跑若干轮物理，让布局接近稳定后再绘制，避免边线乱飞
+  function warmLayout() {
+    if (state.view !== 'nebula') return;
+    var steps = nodes.length > 400 ? 40 : 100;
+    for (var w = 0; w < steps; w++) physics();
+    for (var q = 0; q < nodes.length; q++) {
+      nodes[q].vx = 0; nodes[q].vy = 0; nodes[q].vz = 0;
+    }
+  }
+
+  // ---------- 相机与绘制 ----------
+  var unit = 1;
+  var pjYaw = null, pjCosY = 1, pjSinY = 0;
+  var pjPitch = null, pjCosP = 1, pjSinP = 0;
+  function projectXYZ(x, y, z) {
+    if (pjYaw !== cam.yaw) { pjYaw = cam.yaw; pjCosY = Math.cos(cam.yaw); pjSinY = Math.sin(cam.yaw); }
+    if (pjPitch !== cam.pitch) { pjPitch = cam.pitch; pjCosP = Math.cos(cam.pitch); pjSinP = Math.sin(cam.pitch); }
+    var x1 = (x - pivot.x) * pjCosY - (z - pivot.z) * pjSinY;
+    var z1 = (x - pivot.x) * pjSinY + (z - pivot.z) * pjCosY;
+    var y1 = (y - pivot.y) * pjCosP - z1 * pjSinP;
+    var z2 = (y - pivot.y) * pjSinP + z1 * pjCosP;
+    // 小银河用近似正交投影，避免近侧轨道被透视放大后顶出画布
+    var s = state.view === 'galaxy' ? 1 : cam.dist / (cam.dist + z2);
+    return {
+      x: W / 2 + cam.px + x1 * unit * s * cam.zoom,
+      y: H / 2 + cam.py + y1 * unit * s * cam.zoom,
+      s: s,
+      z: z2
+    };
+  }
+  function project(n) {
+    return projectXYZ(n.x, n.y, n.z);
+  }
+
+  var stars = [];
+  (function () {
+    var seed = 20261101;
+    function rnd() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+    for (var i = 0; i < 260; i++) {
+      var cc = i % 9 === 0 ? '#ffd9a8' : (i % 7 === 0 ? '#a8e6ff' : '#cfd8ff');
+      stars.push({ x: rnd(), y: rnd(), r: rnd() * 1.2 + 0.3, a: rnd() * 0.35 + 0.08, ph: rnd() * 6.28, tw: 0.5 + rnd() * 1.5, c: cc, dp: 0.4 + rnd() * 1.1 });
+    }
+  })();
+
+  // 星空银河背景（尺寸变化时重建，每帧只贴一张图）
+  var bgCanvas = null, bgW = 0, bgH = 0;
+  var dustSprite = null, snowSprite = null;
+  var dust = [], snow = [];
+  var meteors = [], nextMeteorAt = 0;
+  (function () {
+    var sd = 4242;
+    function rd() { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; }
+    for (var i = 0; i < 150; i++) {
+      var big = i % 24 === 0;
+      dust.push({
+        nx: rd(), ny: rd(),
+        r: big ? 2.4 + rd() * 3.1 : 0.5 + rd() * 1.2,
+        vy: 3 + rd() * 11,
+        sw: 5 + rd() * 16,
+        sp: 0.25 + rd() * 0.85,
+        ph: rd() * Math.PI * 2,
+        a: big ? 0.07 + rd() * 0.07 : 0.12 + rd() * 0.2,
+        dp: 0.3 + rd() * 0.9
+      });
+    }
+    // 雪花：向下飘落，细小、淡白
+    for (var j = 0; j < 90; j++) {
+      snow.push({
+        nx: rd(), ny: rd(),
+        r: 0.7 + rd() * 1.6,
+        vy: 7 + rd() * 16,
+        sw: 4 + rd() * 14,
+        sp: 0.3 + rd() * 0.8,
+        ph: rd() * Math.PI * 2,
+        a: 0.10 + rd() * 0.3,
+        dp: 0.2 + rd() * 0.8
+      });
+    }
+  })();
+  function buildBackground() {
+    var w = Math.max(1, Math.floor(W)), h = Math.max(1, Math.floor(H));
+    if (w < 2 || h < 2) return;
+    if (bgCanvas && bgW === w && bgH === h) return;
+    bgW = w; bgH = h;
+    var ratio = DPR || 1;
+    var c = document.createElement('canvas');
+    c.width = Math.floor(w * ratio);
+    c.height = Math.floor(h * ratio);
+    var g = c.getContext('2d');
+    g.scale(ratio, ratio);
+    var seed = 60613;
+    function rnd() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+    var cx = w * 0.46, cy = h * 0.54, R = Math.max(w, h) * 0.8;
+
+    // 银河主带：斜向椭圆柔光
+    g.save();
+    g.translate(cx, cy);
+    g.rotate(-0.62);
+    g.scale(1, 0.32);
+    var rg = g.createRadialGradient(0, 0, 0, 0, 0, R);
+    rg.addColorStop(0, 'rgba(170,190,255,0.16)');
+    rg.addColorStop(0.3, 'rgba(130,140,235,0.085)');
+    rg.addColorStop(0.65, 'rgba(95,95,180,0.03)');
+    rg.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rg;
+    g.beginPath(); g.arc(0, 0, R, 0, Math.PI * 2); g.fill();
+    g.restore();
+
+    // 银河带里的密集星点
+    var ang = -0.62, dxu = Math.cos(ang), dyu = Math.sin(ang);
+    var nx = -dyu, ny = dxu;
+    for (var si2 = 0; si2 < 1100; si2++) {
+      var along = (rnd() - 0.5) * R * 1.6;
+      var across = (rnd() + rnd() + rnd() - 1.5) * h * 0.09;
+      var px = cx + dxu * along + nx * across;
+      var py = cy + dyu * along + ny * across;
+      g.globalAlpha = 0.06 + rnd() * 0.34;
+      g.fillStyle = si2 % 11 === 0 ? '#ffd7a8' : (si2 % 5 === 0 ? '#a9dcff' : '#e6ecff');
+      g.fillRect(px, py, 1.1, 1.1);
+    }
+    // 散落星点
+    for (var sj = 0; sj < 520; sj++) {
+      var big = rnd() > 0.86;
+      g.globalAlpha = 0.05 + rnd() * 0.28;
+      g.fillStyle = sj % 8 === 0 ? '#ffd7a8' : (sj % 6 === 0 ? '#a9dcff' : '#dbe4ff');
+      g.fillRect(rnd() * w, rnd() * h, big ? 1.6 : 1, big ? 1.6 : 1);
+    }
+    g.globalAlpha = 1;
+    bgCanvas = c;
+  }
+
+  // 浮尘贴图：中心亮、边缘很散，做成朦胧光点
+  function makeDustSprite() {
+    var s = 64, c = document.createElement('canvas');
+    c.width = s; c.height = s;
+    var g = c.getContext('2d');
+    var rg = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    rg.addColorStop(0, 'rgba(255,250,236,0.60)');
+    rg.addColorStop(0.30, 'rgba(255,246,220,0.26)');
+    rg.addColorStop(0.65, 'rgba(255,242,214,0.08)');
+    rg.addColorStop(1, 'rgba(255,240,210,0)');
+    g.fillStyle = rg;
+    g.beginPath(); g.arc(s / 2, s / 2, s / 2, 0, Math.PI * 2); g.fill();
+    return c;
+  }
+
+  // 雪花贴图：小而清晰的淡白点
+  function makeSnowSprite() {
+    var s = 32, c = document.createElement('canvas');
+    c.width = s; c.height = s;
+    var g = c.getContext('2d');
+    var rg = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    rg.addColorStop(0, 'rgba(232,240,255,0.9)');
+    rg.addColorStop(0.42, 'rgba(220,232,255,0.5)');
+    rg.addColorStop(1, 'rgba(210,225,255,0)');
+    g.fillStyle = rg;
+    g.beginPath(); g.arc(s / 2, s / 2, s / 2, 0, Math.PI * 2); g.fill();
+    return c;
+  }
+
+  // 远景动态星云：预渲染成柔光贴图，放大绘制自带模糊感
+  function makeNebula(r, g0, b, a) {
+    var s = 200, c = document.createElement('canvas');
+    c.width = s; c.height = s;
+    var g = c.getContext('2d');
+    var rg = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    rg.addColorStop(0, 'rgba(' + r + ',' + g0 + ',' + b + ',' + a + ')');
+    rg.addColorStop(0.35, 'rgba(' + r + ',' + g0 + ',' + b + ',' + (a * 0.42) + ')');
+    rg.addColorStop(0.72, 'rgba(' + r + ',' + g0 + ',' + b + ',' + (a * 0.10) + ')');
+    rg.addColorStop(1, 'rgba(' + r + ',' + g0 + ',' + b + ',0)');
+    g.fillStyle = rg;
+    g.fillRect(0, 0, s, s);
+    // 零星亮颗粒，让云絮不那么均匀
+    var seed = r * 7 + b * 13 + 1;
+    for (var i = 0; i < 40; i++) {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      var rx = ((seed / 4294967296) - 0.5) * s * 0.72;
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      var ry = ((seed / 4294967296) - 0.5) * s * 0.72;
+      var dd = Math.hypot(rx, ry) / (s * 0.36);
+      if (dd > 1) continue;
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      g.globalAlpha = (seed / 4294967296) * 0.5 * (1 - dd);
+      g.fillStyle = 'rgba(255,255,255,0.9)';
+      g.beginPath();
+      g.arc(s / 2 + rx, s / 2 + ry, 0.6 + (1 - dd) * 1.4, 0, Math.PI * 2);
+      g.fill();
+    }
+    return c;
+  }
+
+  var nebulas = [
+    { sp: makeNebula(96, 132, 255, 0.5), x: 0.17, y: 0.23, r: 0.62, ax: 0.022, ay: 0.03, sp1: 0.09, ph: 0.7, a: 0.15, dp: 0.45 },
+    { sp: makeNebula(178, 120, 255, 0.45), x: 0.76, y: 0.19, r: 0.5, ax: 0.03, ay: 0.02, sp1: 0.12, ph: 2.1, a: 0.13, dp: 0.55 },
+    { sp: makeNebula(72, 196, 196, 0.42), x: 0.63, y: 0.82, r: 0.58, ax: 0.025, ay: 0.028, sp1: 0.07, ph: 4.3, a: 0.11, dp: 0.65 },
+    { sp: makeNebula(255, 148, 96, 0.4), x: 0.26, y: 0.74, r: 0.46, ax: 0.02, ay: 0.025, sp1: 0.11, ph: 5.4, a: 0.09, dp: 0.75 }
+  ];
+
+  var vignette = null, vigW = 0, vigH = 0;
+
+  var glowCache = {};
+  function glowSprite(color) {
+    if (glowCache[color]) return glowCache[color];
+    var size = 64;
+    var c = document.createElement('canvas');
+    c.width = c.height = size;
+    var g = c.getContext('2d');
+    var rg = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    rg.addColorStop(0, color);
+    rg.addColorStop(0.25, color);
+    rg.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rg;
+    g.beginPath();
+    g.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    g.fill();
+    glowCache[color] = c;
+    return c;
+  }
+
+  function drawGlow(x, y, rad, color, alpha) {
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+    ctx.drawImage(glowSprite(color), x - rad, y - rad, rad * 2, rad * 2);
+  }
+
+  function visible(n) {
+    if (hidden[n.cat]) return false;
+    return true;
+  }
+  function neighborSet(n) {
+    var s = {};
+    if (!n) return s;
+    for (var i = 0; i < edges.length; i++) {
+      if (edges[i].a === n) s[edges[i].b.id] = 1;
+      if (edges[i].b === n) s[edges[i].a.id] = 1;
+    }
+    return s;
+  }
+
+  var DAY_MS = 24 * 60 * 60 * 1000;
+
+  // 突触修剪：超过 forgetStartDays 天未打开的节点开始衰减，到 forgetHideDays 天完全隐藏
+  function pruneStrength(n, nowMs) {
+    if (!state.prune || !n || n.isGroup || n.cat === 'hub') return 1;
+    if (nowMs == null && n._ps != null) return n._ps;
+    var now = nowMs || Date.now();
+    var la = n.la || now;
+    var days = (now - la) / DAY_MS;
+    if (days <= TEMPLATE.forgetStartDays) return 1;
+    var span = Math.max(1, TEMPLATE.forgetHideDays - TEMPLATE.forgetStartDays);
+    var t = Math.min(1, (days - TEMPLATE.forgetStartDays) / span);
+    return Math.max(0, 1 - t * t * (3 - 2 * t));
+  }
+  function refreshPrune() {
+    var now = Date.now();
+    for (var i = 0; i < nodes.length; i++) nodes[i]._ps = pruneStrength(nodes[i], now);
+    return now;
+  }
+
+  function alphaFor(n) {
+    if (!visible(n)) return 0;
+    var ps = pruneStrength(n);
+    var st = state.search;
+    if (st) {
+      var hitMap = st.map;
+      if (hitMap[n.id]) return 1;
+      return 0.1;
+    }
+    if (state.selected) {
+      var nb = state.neighbors;
+      if (n === state.selected) return 1;
+      if (nb[n.id]) return 0.95 * ps;
+      return 0.18 * ps;
+    }
+    // 按权重压暗次要节点，让少量主星从上千个光点里显出来
+    return ps * (0.34 + 0.66 * Math.max(0, Math.min(1, n.w || 0.5)));
+  }
+
+  // ---------- 二维视图：矩阵 / 旭日 / 思维导图 ----------
+  var FONT = '"PingFang SC","Microsoft YaHei",sans-serif';
+  var hit = { boxes: [], arcs: [], pts: {} };
+  var treeOpen = {};
+
+  function is2D() {
+    return state.view === 'matrix' || state.view === 'sunburst' || state.view === 'tree';
+  }
+  function groupOf(cat) { return byId['g_' + cat] || null; }
+  function hitReset() { hit.boxes = []; hit.arcs = []; hit.pts = {}; }
+  function hitBox(node, x, y, w, h) {
+    if (!node) return;
+    hit.boxes.push({ node: node, x: x, y: y, w: w, h: h });
+    hit.pts[node.id] = { x: x + w / 2, y: y - 4 };
+  }
+  function hitArc(node, cx, cy, r0, r1, a0, a1) {
+    if (!node) return;
+    hit.arcs.push({ node: node, cx: cx, cy: cy, r0: r0, r1: r1, a0: a0, a1: a1 });
+    var m = (a0 + a1) / 2, rr = (r0 + r1) / 2;
+    hit.pts[node.id] = { x: cx + Math.cos(m) * rr, y: cy + Math.sin(m) * rr - 6 };
+  }
+  function pick2(mx, my) {
+    var i, a, b, dx, dy, r, ang;
+    for (i = hit.arcs.length - 1; i >= 0; i--) {
+      a = hit.arcs[i];
+      dx = mx - a.cx; dy = my - a.cy;
+      r = Math.hypot(dx, dy);
+      if (r < a.r0 - 3 || r > a.r1 + 3) continue;
+      ang = Math.atan2(dy, dx);
+      if (ang < a.a0) ang += Math.PI * 2;
+      if (ang <= a.a1) return a.node;
+    }
+    for (i = hit.boxes.length - 1; i >= 0; i--) {
+      b = hit.boxes[i];
+      if (mx >= b.x - 3 && mx <= b.x + b.w + 3 && my >= b.y - 3 && my <= b.y + b.h + 3) return b.node;
+    }
+    return null;
+  }
+  function posOf(n) {
+    if (is2D() && n && hit.pts[n.id]) return hit.pts[n.id];
+    return project(n);
+  }
+  function ringPath(cx, cy, r0, r1, a0, a1) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r1, a0, a1);
+    ctx.arc(cx, cy, r0, a1, a0, true);
+    ctx.closePath();
+  }
+  function curveLine(x1, y1, x2, y2) {
+    var mx = (x1 + x2) / 2;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.bezierCurveTo(mx, y1, mx, y2, x2, y2);
+    ctx.stroke();
+  }
+
+  // 分层之间的跨层关联计数
+  function matrixCounts() {
+    var pairs = {}, maxC = 1, diag = {};
+    nodes.forEach(function (n) { if (!n.isGroup) diag[n.cat] = (diag[n.cat] || 0) + 1; });
+    edges.forEach(function (e) {
+      var ia = LAYERS.indexOf(e.a.cat), ib = LAYERS.indexOf(e.b.cat);
+      if (ia < 0 || ib < 0 || ia === ib) return;
+      var lo = ia < ib ? ia : ib, hi = ia < ib ? ib : ia;
+      var k = lo + ':' + hi;
+      pairs[k] = (pairs[k] || 0) + 1;
+      if (pairs[k] > maxC) maxC = pairs[k];
+    });
+    return { pairs: pairs, maxC: maxC, diag: diag };
+  }
+
+  function drawMatrix() {
+    hitReset();
+    var n = LAYERS.length;
+    if (!n) return;
+    var md = matrixCounts();
+    var grid = Math.min(W - 132, H - 138);
+    if (grid < 70) grid = Math.max(70, Math.min(W, H) - 40);
+    var cell = grid / n;
+    var x0 = W / 2 - grid / 2;
+    var y0 = H / 2 - grid / 2 + 10;
+    var k = cam.zoom;
+    function bx(x) { return W / 2 + cam.px + (x - W / 2) * k; }
+    function by(y) { return H / 2 + cam.py + (y - H / 2) * k; }
+    var cs = cell * k;
+    var gx0 = bx(x0), gy0 = by(y0);
+
+    var i, j, ca, cb, c, t;
+    for (i = 0; i < n; i++) {
+      for (j = 0; j < n; j++) {
+        ca = LAYERS[j]; cb = LAYERS[i];
+        var dim = (hidden[ca] || hidden[cb]) ? 0.16 : 1;
+        var x = gx0 + j * cs, y = gy0 + i * cs;
+        if (i === j) {
+          ctx.globalAlpha = 0.05 * dim;
+          ctx.fillStyle = '#ffffff';
+        } else {
+          c = md.pairs[(i < j ? i : j) + ':' + (i < j ? j : i)] || 0;
+          t = c ? Math.log(1 + c) / Math.log(1 + md.maxC) : 0;
+          ctx.fillStyle = mixColor(CATS[ca].color, CATS[cb].color, 0.5);
+          ctx.globalAlpha = (c ? 0.09 + t * 0.75 : 0.025) * dim;
+        }
+        ctx.fillRect(x, y, cs, cs);
+      }
+    }
+
+    // 网格线
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,.06)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (i = 0; i <= n; i++) {
+      ctx.moveTo(gx0 + i * cs, gy0);
+      ctx.lineTo(gx0 + i * cs, gy0 + grid * k);
+      ctx.moveTo(gx0, gy0 + i * cs);
+      ctx.lineTo(gx0 + grid * k, gy0 + i * cs);
+    }
+    ctx.stroke();
+
+    // 对角线：该层条目数
+    ctx.font = '10px ' + FONT;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#8e97ab';
+    ctx.globalAlpha = 0.55;
+    for (i = 0; i < n; i++) {
+      ctx.fillText(String(md.diag[LAYERS[i]] || 0), gx0 + (i + 0.5) * cs, gy0 + (i + 0.5) * cs);
+    }
+
+    // 悬停单元格
+    var hj = Math.floor((mouse.x - gx0) / cs), hi = Math.floor((mouse.y - gy0) / cs);
+    if (mouse.inside && hj >= 0 && hj < n && hi >= 0 && hi < n) {
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(gx0 + hj * cs + 1, gy0 + hi * cs + 1, cs - 2, cs - 2);
+      if (hi !== hj) {
+        c = md.pairs[(hi < hj ? hi : hj) + ':' + (hi < hj ? hj : hi)] || 0;
+        ctx.globalAlpha = 0.95;
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '600 ' + Math.min(14, Math.max(10, cs * 0.32)) + 'px ' + FONT;
+        ctx.fillText(String(c), gx0 + (hj + 0.5) * cs, gy0 + (hi + 0.5) * cs);
+      }
+    }
+
+    // 行标签
+    ctx.font = '11px ' + FONT;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (i = 0; i < n; i++) {
+      var rcat = LAYERS[i];
+      ctx.globalAlpha = hidden[rcat] ? 0.3 : 0.9;
+      ctx.fillStyle = CATS[rcat].color;
+      ctx.fillText(CATS[rcat].label, gx0 - 10, gy0 + (i + 0.5) * cs);
+      var rw = ctx.measureText(CATS[rcat].label).width;
+      hitBox(groupOf(rcat), gx0 - 12 - rw, gy0 + (i + 0.5) * cs - 9, rw + 8, 18);
+    }
+
+    // 列标签（斜放）
+    for (j = 0; j < n; j++) {
+      var ccat = LAYERS[j];
+      ctx.save();
+      ctx.translate(gx0 + (j + 0.5) * cs, gy0 - 10);
+      ctx.rotate(-Math.PI / 4);
+      ctx.globalAlpha = hidden[ccat] ? 0.3 : 0.9;
+      ctx.fillStyle = CATS[ccat].color;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(CATS[ccat].label, 0, 0);
+      ctx.restore();
+      var cw = ctx.measureText(CATS[ccat].label).width * 0.8;
+      hitBox(groupOf(ccat), gx0 + (j + 0.5) * cs - cw * 0.55, gy0 - 14 - cw, cw * 1.1, cw + 8);
+    }
+
+    ctx.globalAlpha = 0.45;
+    ctx.fillStyle = '#8e97ab';
+    ctx.font = '11px ' + FONT;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('对角线 = 该层条目数 · 其余格 = 两层的跨层关联数', W / 2, H - 16);
+    ctx.globalAlpha = 1;
+  }
+
+  function drawSunburst() {
+    hitReset();
+    var n = LAYERS.length;
+    if (!n) return;
+    var items = {};
+    nodes.forEach(function (x) { if (!x.isGroup) (items[x.cat] = items[x.cat] || []).push(x); });
+    var base = Math.min(W, H) * 0.44 * cam.zoom;
+    var cx = W / 2 + cam.px, cy = H / 2 + cam.py;
+    var hubR = base * 0.13;
+    var rA = hubR + base * 0.05;
+    var rB = rA + base * 0.19;
+    var rC = rB + base * 0.04;
+    var rD = rC + base * 0.15;
+
+    var total = 0, i;
+    for (i = 0; i < n; i++) if (!hidden[LAYERS[i]]) total += (items[LAYERS[i]] || []).length;
+    if (total <= 0) total = 1;
+
+    // 中枢
+    var gd = ctx.createRadialGradient(cx, cy, 0, cx, cy, hubR * 2);
+    gd.addColorStop(0, 'rgba(255,226,160,.85)');
+    gd.addColorStop(0.45, 'rgba(255,226,160,.28)');
+    gd.addColorStop(1, 'rgba(255,226,160,0)');
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = gd;
+    ctx.beginPath();
+    ctx.arc(cx, cy, hubR * 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffe2a0';
+    ctx.beginPath();
+    ctx.arc(cx, cy, hubR * 0.62, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#3a2f12';
+    ctx.font = '600 12px ' + FONT;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('观测点', cx, cy);
+    hitArc(hub, cx, cy, 0, hubR, -Math.PI, Math.PI);
+
+    var a = -Math.PI / 2;
+    for (i = 0; i < n; i++) {
+      var cat = LAYERS[i];
+      var list = items[cat] || [];
+      if (hidden[cat] || !list.length) continue;
+      var span = Math.PI * 2 * list.length / total;
+      var a0 = a, a1 = a + span;
+      a = a1;
+      var g = groupOf(cat);
+
+      ctx.globalAlpha = (state.selected === g || state.hover === g) ? 0.55 : 0.22;
+      ctx.fillStyle = CATS[cat].color;
+      ringPath(cx, cy, rA, rB, a0, a1);
+      ctx.fill();
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = CATS[cat].color;
+      ctx.lineWidth = 1;
+      ringPath(cx, cy, rA, rB, a0, a1);
+      ctx.stroke();
+      hitArc(g, cx, cy, rA, rB, a0, a1);
+
+      var step = span / list.length;
+      var gap = Math.min(step * 0.18, 0.012);
+      for (var q = 0; q < list.length; q++) {
+        var ch = list[q];
+        var al = alphaFor(ch);
+        if (al <= 0.02) continue;
+        var b0 = a0 + q * step + gap, b1 = a0 + (q + 1) * step - gap;
+        ctx.globalAlpha = Math.min(1, (0.18 + ch.w * 0.55) * al);
+        ctx.fillStyle = mixColor('#dfe7f6', CATS[cat].color, 0.45 + ch.w * 0.35);
+        ringPath(cx, cy, rC, rD, b0, b1);
+        ctx.fill();
+        if (ch === state.selected || ch === state.hover) {
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = '#ffffff';
+          ringPath(cx, cy, rC - 3, rD + 3, b0, b1);
+          ctx.fill();
+        }
+        hitArc(ch, cx, cy, rC, rD, b0, b1);
+      }
+
+      // 层名沿半径方向
+      var mid = (a0 + a1) / 2;
+      var lr = rA + (rB - rA) * 0.56;
+      ctx.save();
+      ctx.translate(cx + Math.cos(mid) * lr, cy + Math.sin(mid) * lr);
+      var flip = mid > Math.PI / 2 || mid < -Math.PI / 2;
+      ctx.rotate(mid + (flip ? Math.PI : 0));
+      ctx.globalAlpha = 0.95;
+      ctx.fillStyle = CATS[cat].color;
+      ctx.font = '600 ' + Math.max(9, Math.min(12, span * 30)) + 'px ' + FONT;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(CATS[cat].label, 0, 0);
+      ctx.restore();
+    }
+
+    ctx.globalAlpha = 0.45;
+    ctx.fillStyle = '#8e97ab';
+    ctx.font = '11px ' + FONT;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('内圈 观测点 · 中环 分层 · 外环 条目（点击可选中）', W / 2, H - 16);
+    ctx.globalAlpha = 1;
+  }
+
+  function drawTree() {
+    hitReset();
+    var items = {};
+    nodes.forEach(function (x) { if (!x.isGroup) (items[x.cat] = items[x.cat] || []).push(x); });
+    var rowH = 24;
+    var rows = 0, i;
+    for (i = 0; i < LAYERS.length; i++) rows += 1 + (treeOpen[LAYERS[i]] ? (items[LAYERS[i]] || []).length : 0);
+    var totalH = Math.max(1, rows) * rowH;
+    var yPos = {}, cPos = {};
+    var y = -totalH / 2 + rowH / 2;
+    for (i = 0; i < LAYERS.length; i++) {
+      var cat = LAYERS[i];
+      yPos[cat] = y;
+      y += rowH;
+      if (treeOpen[cat]) (items[cat] || []).forEach(function (ch) { cPos[ch.id] = y; y += rowH; });
+    }
+
+    var hubX = 0, layerX = 190, childX = 380;
+    var bx0 = -30, bx1 = childX + 160;
+    var ccx = (bx0 + bx1) / 2;
+    var sc = Math.min((W - 150) / (bx1 - bx0), (H - 130) / (totalH + 30), 1.25);
+    sc = Math.max(0.45, sc);
+    var k = sc * cam.zoom;
+    function tx(x) { return W / 2 + cam.px + (x - ccx) * k; }
+    function ty(v) { return H / 2 + cam.py + v * k; }
+
+    var hx = tx(hubX), hy = ty(0);
+    var hr = Math.max(6, Math.min(12, 10 * k));
+
+    // 连线
+    for (i = 0; i < LAYERS.length; i++) {
+      var lcat = LAYERS[i];
+      var lx = tx(layerX), ly = ty(yPos[lcat]);
+      ctx.globalAlpha = hidden[lcat] ? 0.12 : 0.42;
+      ctx.strokeStyle = CATS[lcat].color;
+      ctx.lineWidth = 1.3;
+      curveLine(hx + hr, hy, lx - 7 * k, ly);
+      if (treeOpen[lcat]) {
+        (items[lcat] || []).forEach(function (ch) {
+          var cxp = tx(childX), cyp = ty(cPos[ch.id]);
+          ctx.globalAlpha = alphaFor(ch) <= 0.02 ? 0.04 : 0.26;
+          ctx.strokeStyle = CATS[lcat].color;
+          ctx.lineWidth = 0.9;
+          curveLine(lx + 7 * k, ly, cxp - 5 * k, cyp);
+        });
+      }
+    }
+
+    // 中枢
+    ctx.globalAlpha = 0.9;
+    var gd = ctx.createRadialGradient(hx, hy, 0, hx, hy, hr * 3);
+    gd.addColorStop(0, 'rgba(255,226,160,.8)');
+    gd.addColorStop(1, 'rgba(255,226,160,0)');
+    ctx.fillStyle = gd;
+    ctx.beginPath();
+    ctx.arc(hx, hy, hr * 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffe2a0';
+    ctx.beginPath();
+    ctx.arc(hx, hy, hr * 0.7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.font = '700 ' + Math.max(12, 14 * k) + 'px ' + FONT;
+    ctx.fillStyle = '#fff1c9';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('观测点', hx + hr * 1.6, hy);
+    hitBox(hub, hx - hr * 1.2, hy - hr * 1.6, hr * 4.2, hr * 3.2);
+
+    // 分层与条目
+    for (i = 0; i < LAYERS.length; i++) {
+      var cat2 = LAYERS[i];
+      var g = groupOf(cat2);
+      var cnt = (items[cat2] || []).length;
+      var lx2 = tx(layerX), ly2 = ty(yPos[cat2]);
+      ctx.globalAlpha = hidden[cat2] ? 0.18 : 1;
+      ctx.fillStyle = CATS[cat2].color;
+      ctx.beginPath();
+      ctx.arc(lx2, ly2, 6 * k, 0, Math.PI * 2);
+      ctx.fill();
+      if (state.selected === g || state.hover === g) {
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(lx2, ly2, 9 * k, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      var label = (treeOpen[cat2] ? '▾ ' : '▸ ') + CATS[cat2].label;
+      ctx.font = '600 ' + Math.max(10.5, 12.5 * k) + 'px ' + FONT;
+      ctx.fillStyle = CATS[cat2].color;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, lx2 + 9 * k, ly2);
+      var lw = ctx.measureText(label).width;
+      ctx.globalAlpha = hidden[cat2] ? 0.1 : 0.55;
+      ctx.fillStyle = '#8e97ab';
+      ctx.font = Math.max(9, 10 * k) + 'px ' + FONT;
+      ctx.fillText(' ' + cnt, lx2 + 9 * k + lw, ly2);
+      hitBox(g, lx2 - 16, ly2 - Math.max(11, rowH * k / 2), (childX - layerX) * k + 140, Math.max(22, rowH * k));
+
+      if (treeOpen[cat2]) {
+        (items[cat2] || []).forEach(function (ch) {
+          var cxp = tx(childX), cyp = ty(cPos[ch.id]);
+          var al = alphaFor(ch);
+          if (al <= 0.02) return;
+          var rr = Math.max(1.6, 3.4 * k) * (0.65 + ch.w * 0.6);
+          ctx.globalAlpha = al;
+          ctx.fillStyle = CATS[cat2].color;
+          ctx.beginPath();
+          ctx.arc(cxp, cyp, rr, 0, Math.PI * 2);
+          ctx.fill();
+          if (ch === state.selected || ch === state.hover) {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.arc(cxp, cyp, rr + 3, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          ctx.font = Math.max(9.5, 11 * k) + 'px ' + FONT;
+          ctx.fillStyle = mixColor('#dbe3f2', CATS[cat2].color, Math.min(0.55, 0.18 + ch.w * 0.45));
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(ch.title, cxp + rr + 6, cyp);
+          var tw = ctx.measureText(ch.title).width;
+          hitBox(ch, cxp - 8, cyp - 10, tw + rr + 18, 20);
+        });
+      }
+    }
+
+    ctx.globalAlpha = 0.45;
+    ctx.fillStyle = '#8e97ab';
+    ctx.font = '11px ' + FONT;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('点击分层展开 / 收起 · 拖动平移 · 滚轮缩放', W / 2, H - 16);
+    ctx.globalAlpha = 1;
+  }
+
+  // 轨道线：在 3D 空间里画一圈，投影后自然成为椭圆
+  function strokeOrbit(cx, cy, cz, r, seg) {
+    ctx.beginPath();
+    for (var i = 0; i <= seg; i++) {
+      var a = i / seg * Math.PI * 2;
+      var p = projectXYZ(cx + Math.cos(a) * r, cy, cz + Math.sin(a) * r);
+      if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+  }
+
+  function drawOrbits() {
+    ctx.setLineDash([]);
+    ctx.lineWidth = 1;
+    for (var ci = 0; ci < LAYERS.length; ci++) {
+      var cat = LAYERS[ci];
+      var g = byId['g_' + cat];
+      if (!g || !g.oR) continue;
+      // 分层节点绕观测点的公转轨道
+      ctx.strokeStyle = CATS[cat].color;
+      ctx.globalAlpha = 0.12;
+      strokeOrbit(hub.x, hub.y, hub.z, g.oR, 48);
+      // 条目绕分层节点的嵌套小轨道
+      if (g.sRs) {
+        for (var ri = 0; ri < g.sRs.length; ri++) {
+          ctx.globalAlpha = 0.1 - ri * 0.025;
+          strokeOrbit(g.x, g.y, g.z, g.sRs[ri], 24);
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // 小银河强调恒星/行星/卫星的尺寸差，其它视图按权重拉开主次
+  function nodeBaseR(n) {
+    var gal = state.view === 'galaxy';
+    if (n === hub) return gal ? 17 : 13.5;
+    if (n.isGroup) return gal ? 11.5 : 9.5;
+    var w = Math.max(0, Math.min(1, n.w || 0.5));
+    if (gal) return 1.8 + w * w * 3.6;
+    return 1.3 + w * w * 5;
+  }
+
+  function draw() {
+    if (W === 1) resize();
+    var wallNow = refreshPrune();
+    var now = performance.now() / 1000;
+    unit = Math.min(W, H) * (state.view === 'galaxy' ? 0.29 : 0.37);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    if (bgCanvas) ctx.drawImage(bgCanvas, 0, 0, W, H);
+
+    var yawS = Math.sin(cam.yaw), pitchS = Math.sin(cam.pitch);
+
+    // 远景动态星云：缓慢漂移 + 视角视差 + 放大产生的柔和模糊
+    for (var nbi = 0; nbi < nebulas.length; nbi++) {
+      var nb = nebulas[nbi];
+      var nbx = (nb.x + Math.sin(now * nb.sp1 + nb.ph) * nb.ax) * W + yawS * 46 * nb.dp;
+      var nby = (nb.y + Math.cos(now * nb.sp1 * 0.8 + nb.ph) * nb.ay) * H + pitchS * 28 * nb.dp;
+      var nrad = Math.max(W, H) * nb.r * (1 + 0.06 * Math.sin(now * 0.18 + nb.ph));
+      ctx.globalAlpha = nb.a;
+      ctx.drawImage(nb.sp, nbx - nrad, nby - nrad, nrad * 2, nrad * 2);
+    }
+    ctx.globalAlpha = 1;
+
+    // 星尘背景（闪烁 + 分层视差，增强远近感）
+    for (var i = 0; i < stars.length; i++) {
+      var st = stars[i];
+      var sx = (((st.x * W + yawS * 34 * st.dp) % W) + W) % W;
+      var sy = (((st.y * H + pitchS * 22 * st.dp) % H) + H) % H;
+      ctx.globalAlpha = Math.max(0, Math.min(1, st.a * 2.2 * (0.55 + 0.45 * Math.sin(now * st.tw + st.ph))));
+      ctx.fillStyle = st.c;
+      ctx.beginPath();
+      ctx.arc(sx, sy, st.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // 雪花：向下缓缓飘落
+    if (!snowSprite) snowSprite = makeSnowSprite();
+    var spanS = H + 80;
+    for (var si = 0; si < snow.length; si++) {
+      var sn = snow[si];
+      var sny = ((sn.ny * spanS + now * sn.vy) % spanS + spanS) % spanS - 40;
+      var snx = sn.nx * W + Math.sin(now * sn.sp + sn.ph) * sn.sw + yawS * 14 * sn.dp;
+      var ssz = sn.r * 2.6;
+      ctx.globalAlpha = sn.a * (0.7 + 0.3 * Math.sin(now * 0.5 + sn.ph));
+      ctx.drawImage(snowSprite, snx - ssz / 2, sny - ssz / 2, ssz, ssz);
+    }
+    ctx.globalAlpha = 1;
+
+    // 浮尘：朦胧光点向上飘飞 + 横向摆动 + 轻微视差，少量大颗粒做散景
+    if (!dustSprite) dustSprite = makeDustSprite();
+    var span = H + 80;
+    ctx.globalCompositeOperation = 'lighter';
+    for (var di = 0; di < dust.length; di++) {
+      var du = dust[di];
+      var duy = ((du.ny * span - now * du.vy) % span + span) % span - 40;
+      var dux = du.nx * W + Math.sin(now * du.sp + du.ph) * du.sw + yawS * 18 * du.dp;
+      var dsz = du.r * 11;
+      ctx.globalAlpha = du.a * (0.65 + 0.35 * Math.sin(now * 0.7 + du.ph));
+      ctx.drawImage(dustSprite, dux - dsz / 2, duy - dsz / 2, dsz, dsz);
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+
+    // 流星：约半分钟出现一颗，缓慢斜向划落
+    if (!nextMeteorAt) nextMeteorAt = now + 8 + Math.random() * 12;
+    if (now >= nextMeteorAt) {
+      var mdir = Math.random() < 0.5 ? -1 : 1;
+      var mang = 0.72 + Math.random() * 0.34;
+      var mspd = 190 + Math.random() * 130;
+      meteors.push({
+        x: (0.18 + Math.random() * 0.64) * W,
+        y: -20 + Math.random() * H * 0.22,
+        vx: Math.cos(mang) * mspd * mdir,
+        vy: Math.sin(mang) * mspd,
+        t0: now,
+        life: 1.9 + Math.random() * 0.9
+      });
+      nextMeteorAt = now + 30 + Math.random() * 12;
+    }
+    if (!snowSprite) snowSprite = makeSnowSprite();
+    for (var mi = meteors.length - 1; mi >= 0; mi--) {
+      var mt = meteors[mi];
+      var mp = (now - mt.t0) / mt.life;
+      if (mp > 1) { meteors.splice(mi, 1); continue; }
+      var mhx = mt.x + mt.vx * (now - mt.t0);
+      var mhy = mt.y + mt.vy * (now - mt.t0);
+      var mtx = mhx - mt.vx * 0.42, mty = mhy - mt.vy * 0.42;
+      var mfade = Math.sin(Math.PI * mp);
+      var mg = ctx.createLinearGradient(mtx, mty, mhx, mhy);
+      mg.addColorStop(0, 'rgba(190,215,255,0)');
+      mg.addColorStop(0.7, 'rgba(205,225,255,' + (0.35 * mfade).toFixed(3) + ')');
+      mg.addColorStop(1, 'rgba(255,255,255,' + (0.85 * mfade).toFixed(3) + ')');
+      ctx.strokeStyle = mg;
+      ctx.lineWidth = 1.4;
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(mtx, mty); ctx.lineTo(mhx, mhy); ctx.stroke();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.85 * mfade;
+      ctx.drawImage(snowSprite, mhx - 4, mhy - 4, 8, 8);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    // 暗角：把注意力收拢到中央，也强化纵深感
+    if (!vignette || vigW !== W || vigH !== H) {
+      vigW = W; vigH = H;
+      vignette = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.28, W / 2, H / 2, Math.max(W, H) * 0.78);
+      vignette.addColorStop(0, 'rgba(0,0,0,0)');
+      vignette.addColorStop(0.55, 'rgba(4,7,16,0.14)');
+      vignette.addColorStop(1, 'rgba(2,3,9,0.52)');
+    }
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, W, H);
+
+    if (is2D()) {
+      if (state.view === 'matrix') drawMatrix();
+      else if (state.view === 'sunburst') drawSunburst();
+      else drawTree();
+      ctx.globalAlpha = 1;
+      ctx.setLineDash([]);
+      return;
+    }
+
+    // 观测点随视角偏移
+    hubDrift();
+    // 小银河：实时轨道运行 + 轨道线
+    updateOrbits(now);
+    if (state.view === 'galaxy') drawOrbits();
+
+    // 旋转中心：选中任意节点时平滑移到该节点（观测点除外），取消选中后回到原点；漫游时跟随点亮节点
+    var pv = (state.roamOn && state.roamNode) ? state.roamNode
+      : (state.selected && state.selected.id !== 'hub') ? state.selected : null;
+    var roamPace = !!(state.roamOn && state.roamNode && !is2D());
+    var k = roamPace ? 0.008 : 0.14;
+    pivot.x += ((pv ? pv.x : 0) - pivot.x) * k;
+    pivot.y += ((pv ? pv.y : 0) - pivot.y) * k;
+    pivot.z += ((pv ? pv.z : 0) - pivot.z) * k;
+    // 选中节点后把画布平移量收回，让该节点真正落在屏幕中央；漫游时更缓慢
+    if (recenterPan) {
+      var pk = roamPace ? 0.992 : 0.86;
+      cam.px *= pk;
+      cam.py *= pk;
+      if (Math.abs(cam.px) < 0.6 && Math.abs(cam.py) < 0.6) {
+        cam.px = 0; cam.py = 0;
+        recenterPan = false;
+      }
+    }
+
+    // 连线
+    var selNb = state.selected ? state.neighbors : null;
+    var relCount = 0;
+    for (var ri = 0; ri < edges.length; ri++) if (edges[ri].type === 'relates') relCount++;
+    var showRelWords = relCount <= 12; // 关系较少时始终显示动词，变多后只在选中时显示
+    var bigGraph = nodes.length > 600; // 大图整体压低连线亮度，避免变成一团毛线
+    for (var e = 0; e < edges.length; e++) {
+      var ed = edges[e];
+      if (ed.type === 'relates' && !state.showRelates) continue;
+      if (!visible(ed.a) || !visible(ed.b)) continue;
+      var pa = project(ed.a), pb = project(ed.b);
+      var base = 0.11;
+      var type = ed.type;
+      if (type === 'controls') base = bigGraph ? 0.13 : 0.2;
+      else if (type === 'contains') base = bigGraph ? 0.12 : 0.22;
+      else if (type === 'composed_of' || type === 'feeds') base = bigGraph ? 0.08 : 0.13;
+      else if (type === 'relates') base = bigGraph ? 0.16 : 0.3;
+      else if (type === 'same_name') base = 0.1;
+      // 实体 → 分层中心点的归属性连线：适度调亮，让图呈现网状而不是只有日记辐射
+      else if (type === 'part_of') base = bigGraph ? 0.08 : 0.18;
+      var a = base * Math.min(pa.s, pb.s);
+      var strong = false;
+      var es = Math.min(pruneStrength(ed.a), pruneStrength(ed.b));
+      if (state.search && state.search.map[ed.a.id] && state.search.map[ed.b.id]) { a = (type === 'relates' ? 0.62 : 0.42); strong = true; es = 1; }
+      if (selNb && (ed.a === state.selected || ed.b === state.selected)) { a = (type === 'relates' ? 0.72 : 0.5); strong = true; es = 1; }
+      if (!state.search && !state.selected && !visible(ed.a)) a = 0;
+      if (es <= 0.02) continue;
+      a *= 0.15 + 0.85 * es;
+      if (a <= 0.01) continue;
+      ctx.globalAlpha = Math.min(1, a);
+      var isRel = type === 'relates';
+      var isPart = type === 'part_of';
+      var partColor = (isPart && CATS[ed.a.cat]) ? CATS[ed.a.cat].color : null;
+      // 关系线按语义着色：因果=橙、缓解=绿、冲突=紫、归属=金、其他=粉
+      var relTxt = isRel ? String(ed.label || '') : '';
+      var relCol = '#ff6fb5';
+      if (/导致|引发|造成|加剧|影响|触发|恶化/.test(relTxt)) relCol = '#ff8a4c';
+      else if (/缓解|改善|治愈|帮助|支持|恢复|平静/.test(relTxt)) relCol = '#45d68a';
+      else if (/矛盾|冲突|对抗|回避|压抑|逃避/.test(relTxt)) relCol = '#b08cff';
+      else if (/属于|包含|归属/.test(relTxt)) relCol = '#ffe2a0';
+      ctx.strokeStyle = (type === 'controls' || type === 'contains') ? '#ffe2a0' : (isRel ? relCol : (partColor ? mixColor(partColor, '#9fb0d0', 0.5) : '#9fb0d0'));
+      var lw = isRel ? (strong ? 2.2 : 1.5) : (isPart ? (strong ? 1.4 : 1.1) : (strong ? 1.2 : 1));
+      ctx.lineWidth = Math.max(0.3, lw * (0.3 + 0.7 * es));
+      ctx.setLineDash(isRel ? [5, 4] : []);
+      ctx.beginPath();
+      ctx.moveTo(pa.x, pa.y);
+      if (isRel) {
+        var dx = pb.x - pa.x, dy = pb.y - pa.y;
+        var len = Math.hypot(dx, dy) || 1;
+        var bend = Math.min(72, len * 0.2);
+        var sign = ed.a.id < ed.b.id ? 1 : -1;
+        ctx.quadraticCurveTo(
+          (pa.x + pb.x) / 2 - (dy / len) * bend * sign,
+          (pa.y + pb.y) / 2 + (dx / len) * bend * sign,
+          pb.x, pb.y
+        );
+      } else {
+        ctx.lineTo(pb.x, pb.y);
+      }
+      ctx.stroke();
+
+      // 选中/搜索时，在关系线中间浮现具体关系词（导致、缓解、矛盾…）
+      if (isRel && (strong || showRelWords) && ed.label) {
+        var mid = String(ed.label).slice(0, 6);
+        var mx = (pa.x + pb.x) / 2, my = (pa.y + pb.y) / 2;
+        var mfs = Math.max(9, Math.min(12, 9.5 * cam.zoom * state.size));
+        ctx.font = '600 ' + mfs.toFixed(1) + 'px "PingFang SC","Microsoft YaHei",sans-serif';
+        var mw = ctx.measureText(mid).width;
+        ctx.globalAlpha = Math.min(0.85, a + 0.45);
+        ctx.fillStyle = 'rgba(5,7,12,.8)';
+        ctx.fillRect(mx - mw / 2 - 4, my - mfs * 0.72 - 2, mw + 8, mfs * 1.44 + 4);
+        ctx.fillStyle = relCol;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(mid, mx, my);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+      }
+
+      // 沿连线游走的发光小球
+      if ((e % 3) === 0) {
+        var ph = (now * 0.13 + e * 0.47) % 2;
+        var tt = ph < 1 ? ph : 2 - ph;
+        var bs = (pa.s + pb.s) / 2;
+        var br = Math.max(1.1, 1.7 * bs * cam.zoom * state.size);
+        var bx = pa.x + (pb.x - pa.x) * tt;
+        var by = pa.y + (pb.y - pa.y) * tt;
+        var fal = Math.min(alphaFor(ed.a), alphaFor(ed.b));
+        var fc = type === 'controls' ? '#ffe2a0' : (isRel ? relCol : '#c2d3ff');
+        drawGlow(bx, by, br * 2.2, fc, 0.85 * fal);
+        // 滑动到端点附近时，端点轻微发亮
+        var near = 1 - Math.min(tt, 1 - tt) / 0.12;
+        if (near > 0) {
+          var ep = tt < 0.5 ? pa : pb;
+          drawGlow(ep.x, ep.y, 10 * ep.s * cam.zoom, fc, 0.2 * near * fal);
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.setLineDash([]);
+
+    // 节点
+    var list = [];
+    for (var k = 0; k < nodes.length; k++) if (visible(nodes[k])) list.push(nodes[k]);
+    list.sort(function (a, b) { return project(a).z - project(b).z; });
+
+    var labelBoxes = [];
+    // 选中节点后，所有关联节点参与一圈向内收拢的微弱波动
+    var selP = state.selected ? project(state.selected) : null;
+    var ripBase = now * 2.4;
+    for (var q = 0; q < list.length; q++) {
+      var n = list[q];
+      var p = project(n);
+      var al = alphaFor(n);
+      var isRoamLit = n === state.roamNode;
+      if (isRoamLit) al = Math.max(al, 0.96);
+      if (al <= 0.02) continue;
+      var r = Math.max(1.2, nodeBaseR(n) * (0.62 + n.w * 0.6) * p.s * cam.zoom * state.size);
+      if (r < 1.2) r = 1.2;
+      // 日记裂变：出生 1 秒内从 0 放大到正常大小
+      if (n.bornAt) {
+        var bornAge = wallNow - n.bornAt;
+        if (bornAge < 1000) {
+          var bornK = Math.max(0, bornAge / 1000);
+          r *= bornK * bornK * (3 - 2 * bornK);
+        } else {
+          n.bornAt = 0;
+        }
+      }
+      if (r < 0.3) continue;
+      // 屏幕外节点不绘制，上千个节点时能明显减少每帧开销
+      if (p.x < -80 || p.x > W + 80 || p.y < -80 || p.y > H + 80) continue;
+      var color = CATS[n.cat].color;
+      // 小银河：卫星是浅色小光点，越外圈越暗，与分层恒星拉开层次
+      var sat = state.view === 'galaxy' && !n.isGroup && n !== hub;
+      var tone = sat ? 1 - (n.ring || 0) * 0.16 : 1;
+      // 次要节点向冷灰过渡，主星保留分层原色，避免上千种颜色一起发亮显得杂乱
+      var nc = sat ? mixColor(color, '#ffffff', 0.3)
+        : (n.isGroup || n === hub) ? color
+          : mixColor('#8fa0bd', color, 0.45 + Math.min(0.5, (n.w || 0.5) * 0.55));
+
+      // 反向波动：波峰随距离由外向内推进，关联节点依次轻亮
+      var rip = 0;
+      if (selP && n !== state.selected && state.neighbors[n.id]) {
+        var ds = Math.hypot(p.x - selP.x, p.y - selP.y);
+        var s6 = Math.sin(ripBase + ds * 0.011);
+        if (s6 > 0) rip = s6 * s6;
+      }
+
+      // 光晕
+      var glowR = r * (n === state.selected ? 5.2 : sat ? 2.6 : 3.4) * (1 + rip * 0.22);
+      if (isRoamLit) glowR += r * 3.2;
+      var gd = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowR);
+      gd.addColorStop(0, nc);
+      gd.addColorStop(0.35, nc);
+      gd.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = Math.min(1, (n.isGroup ? 0.3 : sat ? 0.26 * tone : 0.34) * al + 0.14 * rip * al);
+      ctx.fillStyle = gd;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, glowR, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 核心
+      ctx.globalAlpha = al * tone;
+      ctx.fillStyle = nc;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 波动经过时，外圈浮起一道很淡的光环
+      if (rip > 0.02) {
+        ctx.globalAlpha = 0.15 * rip * al;
+        ctx.strokeStyle = nc;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r + 2.5 + rip * 4, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // 无意识漫游：被随机点亮的节点加金色脉冲环
+      if (isRoamLit) {
+        var roamPulse = 0.5 + 0.5 * Math.sin(now * 2.6);
+        ctx.globalAlpha = Math.min(1, (0.55 + 0.35 * roamPulse) * al);
+        ctx.strokeStyle = '#ffd479';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r + 9 + roamPulse * 3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = Math.min(1, (0.35 + 0.3 * roamPulse) * al);
+        ctx.strokeStyle = '#fff0c2';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r + 14, now * 1.4, now * 1.4 + 1.2);
+        ctx.stroke();
+      }
+
+      if (n === hub) {
+        ctx.globalAlpha = 0.85 * al;
+        ctx.strokeStyle = '#fff3cf';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r * 2.3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 0.3 * al;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r * 3.6, 0, Math.PI * 2);
+        ctx.stroke();
+        // 沿中枢光圈旋转的小球
+        for (var oi = 0; oi < 3; oi++) {
+          var oa = now * 0.7 + oi * 2 * Math.PI / 3;
+          drawGlow(p.x + Math.cos(oa) * r * 2.3, p.y + Math.sin(oa) * r * 2.3, r * 0.4, '#fff3cf', 0.9 * al);
+        }
+        for (var oj = 0; oj < 2; oj++) {
+          var ob = -now * 0.5 + oj * Math.PI;
+          drawGlow(p.x + Math.cos(ob) * r * 3.6, p.y + Math.sin(ob) * r * 3.6, r * 0.28, '#ffe2a0', 0.55 * al);
+        }
+      }
+
+      if (state.search && state.search.map[n.id]) {
+        ctx.globalAlpha = 0.9 * al;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r + 4.5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      if (n === state.selected) {
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r + 6, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // 标签
+      var all = state.allLabels;
+      var gal = state.view === 'galaxy';
+      var selGroup = state.selected && state.selected.isGroup ? state.selected : null;
+      var fresh = n.labelUntil && Date.now() < n.labelUntil;
+      var want = all ? true : (fresh || n.isGroup || n === hub || n === state.hover || n === state.roamNode || n === state.selected ||
+        (selGroup && !n.isGroup && n.cat === selGroup.cat) ||
+        (state.search && state.search.map[n.id]) ||
+        (!gal && state.showLabels && n.w >= 0.75 && p.s * cam.zoom > 0.92));
+      if (!want) continue;
+      var isHub = n === hub;
+      var fs, fw, lc;
+      // 字号随缩放/透视变化，且严格保持「观测点 > 分层 > 条目」的层级
+      var kz = Math.min(1.25, Math.max(0.75, cam.zoom * state.size * p.s));
+      if (isHub) { fs = 15 * kz; fw = '700'; lc = '#fff1c9'; }
+      else if (n.isGroup) { fs = 11.5 * kz; fw = '600'; lc = color; }
+      else {
+        fs = (9 + n.w * 2.6) * kz;
+        if (all) fs = Math.min(fs, 10.2 * kz);
+        fw = n.w >= 0.75 ? '600' : '400';
+        lc = mixColor('#dbe3f2', color, Math.min(0.6, 0.12 + n.w * 0.55));
+      }
+      ctx.font = fw + ' ' + fs.toFixed(1) + 'px "PingFang SC","Microsoft YaHei",sans-serif';
+      // 星图里过长的标题截断为 10 字 + 省略号；完整标题保留在节点数据里，悬停时显示
+      if (n._labelSrc !== n.title) {
+        var chars = Array.from(String(n.title || ''));
+        var keepFull = /^(📝|📅)/.test(n.title);
+        n._labelSrc = n.title;
+        n._label = (!keepFull && chars.length > 10) ? chars.slice(0, 10).join('') + '…' : n.title;
+      }
+      var labelTxt = n._label;
+      var tw = ctx.measureText(labelTxt).width;
+      // 小银河里分层标签放到卫星圈外侧，避免压在光点上；右半区的标签朝内展开
+      var gap = r + 6;
+      if (gal && n.isGroup) {
+        var gg = byId['g_' + n.cat];
+        var mx = (gg && gg.sRs) ? gg.sRs[gg.sRs.length - 1] : 0;
+        gap = r + mx * unit * p.s * cam.zoom * state.size + 9;
+      }
+      var left = !(gal && n.isGroup && p.x > W / 2);
+      var lx = left ? p.x + gap : p.x - gap;
+      var ly = p.y + 4;
+      var box = { x: left ? lx - 2 : lx - tw - 4, y: ly - fs, w: tw + 6, h: fs + 5 };
+      var clash = false;
+      for (var bi = 0; bi < labelBoxes.length; bi++) {
+        var bb = labelBoxes[bi];
+        if (box.x < bb.x + bb.w && box.x + box.w > bb.x && box.y < bb.y + bb.h && box.y + box.h > bb.y) { clash = true; break; }
+      }
+      var mustShow = all || fresh || n.isGroup || n === hub || n === state.hover || n === state.roamNode || n === state.selected ||
+        (selGroup && !n.isGroup && n.cat === selGroup.cat);
+      if (clash && !mustShow) continue;
+      labelBoxes.push(box);
+      ctx.globalAlpha = Math.min(1, (isHub ? 1 : n.isGroup ? 0.92 : 0.52 + n.w * 0.32) * al);
+      if (isHub || n.isGroup) { ctx.shadowColor = 'rgba(3,5,10,.9)'; ctx.shadowBlur = 6; }
+      ctx.fillStyle = lc;
+      ctx.textAlign = left ? 'left' : 'right';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(labelTxt, lx, ly);
+      ctx.shadowBlur = 0;
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ---------- 主循环 ----------
+  var drag = { on: false, x: 0, y: 0, moved: 0, vx: 0, vy: 0, pan: false };
+  var linkingFrom = null;
+  var mouse = { x: 0, y: 0, inside: false };
+
+  function frame() {
+    physics();
+    if (state.view !== 'nebula' && !is2D()) {
+      var lerp = 0.12;
+      for (var i = 0; i < nodes.length; i++) {
+        var n = nodes[i];
+        n.x += (n.tx - n.x) * lerp;
+        n.y += (n.ty - n.y) * lerp;
+        n.z += (n.tz - n.z) * lerp;
+      }
+    }
+    // 自动旋转放慢到原来的 1/3；鼠标悬停到节点时暂停，方便点准
+    if (!drag.on && !state.hover && state.autoRotate && state.view !== 'list' && state.view !== 'doc' && !is2D()) cam.yaw += 0.0003;
+    if (state.roamOn && state.view !== 'list' && state.view !== 'doc') {
+      var rt = performance.now();
+      if (rt >= state.nextRoamAt) {
+        roamPick();
+        state.nextRoamAt = rt + 9000 + Math.random() * 4000;
+      }
+      if (!drag.on) roamDrift();
+    }
+    draw();
+    // 漫游时自动显示点亮节点的黑色提示框，并跟随节点移动
+    if (state.roamOn && state.roamNode && state.view !== 'list' && state.view !== 'doc') {
+      var rp = posOf(state.roamNode);
+      tip.innerHTML = '<b>' + esc(state.roamNode.title) + '</b>' + (moodDesc(state.roamNode) ? '<span>' + esc(moodDesc(state.roamNode)) + '</span>' : '');
+      tip.style.left = rp.x + 'px';
+      tip.style.top = rp.y + 'px';
+      tip.style.opacity = 1;
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- 交互 ----------
+  function pick(mx, my) {
+    if (is2D()) return pick2(mx, my);
+    var best = null, bestScore = -1;
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      if (!visible(n) || pruneStrength(n) <= 0.02) continue;
+      var p = project(n);
+      var r = Math.max(1.2, nodeBaseR(n) * (0.62 + n.w * 0.6) * p.s * cam.zoom * state.size);
+      var hitR = Math.max(10, r + 6);
+      var d = Math.hypot(mx - p.x, my - p.y);
+      if (d <= hitR && p.s > bestScore) { best = n; bestScore = p.s; }
+    }
+    return best;
+  }
+
+  var tip = document.getElementById('tip');
+  var pointers = {}, pinch = null;
+  function pinchSpan() {
+    var ids = Object.keys(pointers);
+    if (ids.length < 2) return 0;
+    var a = pointers[ids[0]], b = pointers[ids[1]];
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+  canvas.addEventListener('pointerdown', function (e) {
+    pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+    if (Object.keys(pointers).length === 2) {
+      pinch = { d: pinchSpan() || 1, z: cam.zoom };
+      drag.on = false;
+      drag.moved = 1e6;
+      drag.vx = drag.vy = 0;
+      canvas.classList.remove('dragging');
+      return;
+    }
+    drag.on = true; drag.x = e.clientX; drag.y = e.clientY; drag.moved = 0;
+    drag.vx = drag.vy = 0;
+    // 中键 / 右键 / Shift+左键拖动 = 平移，其余拖动 = 旋转
+    drag.pan = e.button === 1 || e.button === 2 || e.shiftKey;
+    if (drag.pan) e.preventDefault();
+    canvas.classList.add('dragging');
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  canvas.addEventListener('pointermove', function (e) {
+    if (pointers[e.pointerId]) {
+      pointers[e.pointerId].x = e.clientX;
+      pointers[e.pointerId].y = e.clientY;
+    }
+    if (pinch) {
+      var span = pinchSpan();
+      if (span > 0) {
+        var rect = canvas.getBoundingClientRect();
+        var ids = Object.keys(pointers);
+        var a = pointers[ids[0]], b = pointers[ids[1]];
+        var mx = (a.x + b.x) / 2 - rect.left;
+        var my = (a.y + b.y) / 2 - rect.top;
+        if (pinch.mx != null) {
+          cam.px += mx - pinch.mx;
+          cam.py += my - pinch.my;
+        }
+        pinch.mx = mx; pinch.my = my;
+        var z0 = cam.zoom;
+        var z1 = Math.max(0.15, Math.min(3, pinch.z * span / pinch.d));
+        var rr = z1 / z0;
+        var fx = mx - W / 2, fy = my - H / 2;
+        cam.px = fx * (1 - rr) + cam.px * rr;
+        cam.py = fy * (1 - rr) + cam.py * rr;
+        cam.zoom = z1;
+      }
+      drag.moved = 1e6;
+      tip.style.opacity = 0;
+      return;
+    }
+    var rect = canvas.getBoundingClientRect();
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
+    mouse.inside = true;
+    if (drag.on) {
+      var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      drag.x = e.clientX; drag.y = e.clientY;
+      drag.moved += Math.abs(dx) + Math.abs(dy);
+      if (drag.pan || is2D()) {
+        // 平移画布
+        cam.px += dx;
+        cam.py += dy;
+      } else {
+        // 拖动旋转视角
+        cam.yaw += dx * 0.0055;
+        cam.pitch += dy * 0.0042;
+        cam.pitch = Math.max(-1.15, Math.min(1.15, cam.pitch));
+      }
+      tip.style.opacity = 0;
+      return;
+    }
+    var n = pick(mouse.x, mouse.y);
+    state.hover = n;
+    if (n) {
+      var p = posOf(n);
+      tip.innerHTML = '<b>' + esc(n.title) + '</b>' + (moodDesc(n) ? '<span>' + esc(moodDesc(n)) + '</span>' : '');
+      tip.style.left = p.x + 'px';
+      tip.style.top = p.y + 'px';
+      tip.style.opacity = 1;
+    } else {
+      tip.style.opacity = 0;
+    }
+  });
+  canvas.addEventListener('pointerup', function (e) {
+    delete pointers[e.pointerId];
+    if (pinch && Object.keys(pointers).length < 2) pinch = null;
+    var wasMoved = drag.moved;
+    var wasPan = drag.pan;
+    drag.on = false; drag.pan = false;
+    drag.vx = drag.vy = 0;
+    canvas.classList.remove('dragging');
+    if (leftPanel.classList.contains('open')) { leftPanel.classList.remove('open'); return; }
+    // 中键 / 右键 / Shift 拖动只做平移，不触发选中
+    if (!wasPan && wasMoved < (is2D() ? 10 : 6)) {
+      var rect = canvas.getBoundingClientRect();
+      var n = pick(e.clientX - rect.left, e.clientY - rect.top);
+      if (linkingFrom) commitLink(n);
+      else if (state.view === 'tree' && n && n.isGroup) {
+        treeOpen[n.cat] = !treeOpen[n.cat];
+        select(n, true);
+      } else select(n, true);
+    }
+  });
+  canvas.addEventListener('pointercancel', function (e) {
+    delete pointers[e.pointerId];
+    pinch = null;
+    drag.on = false; drag.pan = false;
+    drag.vx = drag.vy = 0;
+    canvas.classList.remove('dragging');
+  });
+  canvas.addEventListener('pointerleave', function () { mouse.inside = false; tip.style.opacity = 0; });
+  canvas.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    var f = e.deltaY > 0 ? 0.9 : 1.1;
+    var z0 = cam.zoom;
+    var rect = canvas.getBoundingClientRect();
+    var fx = e.clientX - rect.left - W / 2;
+    var fy = e.clientY - rect.top - H / 2;
+    var z1 = Math.max(0.15, Math.min(3, z0 * f));
+    var rr = z1 / z0;
+    cam.px = fx * (1 - rr) + cam.px * rr;
+    cam.py = fy * (1 - rr) + cam.py * rr;
+    cam.zoom = z1;
+  }, { passive: false });
+
+  // ---------- 选择与详情 ----------
+  var detail = document.getElementById('detail');
+  var selEmpty = document.getElementById('sel-empty');
+  var right = document.getElementById('right');
+
+  function select(n, openPanel) {
+    var nowMs = Date.now();
+    var prevDays = 0, prevPs = 1, prevLa = 0;
+    if (n && !n.isGroup && n.cat !== 'hub') {
+      prevLa = n.la || 0;
+      prevDays = Math.floor((nowMs - (n.la || nowMs)) / DAY_MS);
+      prevPs = pruneStrength(n, nowMs);
+    }
+    state.selected = n;
+    state.neighbors = neighborSet(n);
+    recenterPan = !!n;
+    syncCats();
+    if (!n) {
+      detail.style.display = 'none';
+      selEmpty.style.display = 'block';
+      if (openPanel) right.classList.remove('open');
+      updatePaneBtns();
+      return;
+    }
+    selEmpty.style.display = 'none';
+    detail.style.display = 'block';
+    if (openPanel) {
+      right.classList.add('open');
+      leftPanel.classList.remove('open');
+    }
+    renderDetail(n, prevDays, prevPs);
+    updatePaneBtns();
+    // 打开即视为一次“回忆”，刷新该节点的活跃时间
+    if (n && !n.isGroup && n.cat !== 'hub') {
+      n.la = nowMs;
+      n._ps = 1;
+      if (nowMs - prevLa > 60 * 60 * 1000) persist();
+      if (prevPs < 0.85) toast('已唤醒「' + n.title + '」');
+    }
+  }
+
+  // 随机漫游（DMN）：偏向孤立、低权重的边缘节点
+  function roamTarget(excludeId) {
+    var deg = {};
+    for (var i = 0; i < edges.length; i++) {
+      deg[edges[i].a.id] = (deg[edges[i].a.id] || 0) + 1;
+      deg[edges[i].b.id] = (deg[edges[i].b.id] || 0) + 1;
+    }
+    var cands = [], total = 0;
+    for (var j = 0; j < nodes.length; j++) {
+      var n = nodes[j];
+      if (n === hub || n.isGroup || !visible(n) || n.id === excludeId) continue;
+      var pn = project(n);
+      if (pn.s < 0.02) continue;
+      var d = deg[n.id] || 0;
+      var wgt = (1 / Math.pow(1 + d, 3)) * Math.max(0.35, 1.15 - n.w * 0.45);
+      cands.push({ n: n, w: wgt });
+      total += wgt;
+    }
+    if (!cands.length) return null;
+    var target = cands[0].n, acc = 0, pick = Math.random() * total;
+    for (var k = 0; k < cands.length; k++) {
+      acc += cands[k].w;
+      if (acc >= pick) { target = cands[k].n; break; }
+    }
+    return target;
+  }
+
+  function roamPick() {
+    var t = roamTarget(state.roamNode ? state.roamNode.id : null);
+    if (!t) return;
+    state.roamNode = t;
+    state.roamLitAt = performance.now();
+    state.hover = t;
+    // 与点击节点一致：把该节点平滑移到画面中央
+    if (!is2D()) recenterPan = true;
+  }
+
+  function roamDrift() {
+    var t = performance.now() / 1000;
+    if (is2D()) {
+      cam.px += Math.sin(t * 0.45) * 0.72;
+      cam.py += Math.cos(t * 0.33) * 0.55;
+    } else {
+      cam.yaw += 0.0004;
+      cam.pitch += Math.sin(t * 0.18) * 0.0007;
+    }
+  }
+
+  function toggleRoam() {
+    state.roamOn = !state.roamOn;
+    var btn = document.getElementById('roam');
+    if (state.roamOn) {
+      btn.textContent = '停止漫游';
+      btn.classList.add('on');
+      state.roamNode = null;
+      state.nextRoamAt = 0;
+      toast('无意识漫游：镜头缓慢漂移，随机点亮记忆节点');
+    } else {
+      btn.textContent = '漫游';
+      btn.classList.remove('on');
+      if (state.hover === state.roamNode) state.hover = null;
+      state.roamNode = null;
+      state.roamLitAt = 0;
+      state.nextRoamAt = 0;
+      tip.style.opacity = 0;
+      toast('已退出漫游');
+    }
+  }
+
+  function nodeTags(n) {
+    var out = [];
+    (n.tokens || []).forEach(function (t) {
+      if (t.length < 2) return;
+      if ((df[t] || 0) < 2) return;
+      out.push(t);
+    });
+    out.sort(function (a, b) { return (df[b] || 0) - (df[a] || 0) || a.length - b.length; });
+    return out.slice(0, 6);
+  }
+
+  function renderDetail(n, prevDays, prevPs) {
+    var color = CATS[n.cat].color;
+    var flag = n.flag ? ' · 【' + n.flag + '】' : '';
+    var html = '';
+    html += '<div class="meta"><span class="badge"><span class="dot" style="background:' + color + ';box-shadow:0 0 8px ' + color + '"></span>' + CATS[n.cat].label + flag + '</span>';
+    html += '<span class="badge">权重 ' + n.w.toFixed(2) + '</span>';
+    if (prevDays != null && n.cat !== 'hub' && !n.isGroup) {
+      html += '<span class="badge">' + (prevPs <= 0.02 ? '已隐藏' : '记忆强度 ' + Math.round(prevPs * 100) + '%') +
+        ' · ' + (prevDays <= 0 ? '今天打开过' : prevDays + ' 天未打开') + '</span>';
+    }
+    html += '</div>';
+    if (n.cat === 'hub') {
+      html += '<div class="acts"><button class="act" data-act="edit">编辑</button></div>';
+    } else if (n.isGroup) {
+      html += '<div class="acts"><button class="act" data-act="edit">编辑</button><button class="act danger" data-act="del-layer">删除分层</button></div>';
+    } else if (!n.isGroup && n.cat !== 'hub') {
+      html += '<div class="acts"><button class="act" data-act="link">＋ 关联节点</button><button class="act" data-act="edit">编辑</button><button class="act danger" data-act="del">删除</button></div>';
+    }
+    html += '<h3>' + esc(n.title) + '</h3>';
+    html += '<div class="desc">' + esc(moodDesc(n)) + '</div>';
+    if (n.content) html += '<div class="sec-t" style="margin-top:12px">具体内容</div><div class="content">' + esc(n.content) + '</div>';
+    var ntags = nodeTags(n);
+    if (ntags.length) {
+      html += '<div class="tags">';
+      for (var i = 0; i < ntags.length; i++) html += '<span class="tag">' + esc(ntags[i]) + '</span>';
+      html += '</div>';
+    }
+    var st = state.search;
+    if (st && st.map[n.id]) {
+      html += '<div class="why">命中理由：' + st.matched[n.id].map(function (t) { return '<code>' + esc(t) + '</code>'; }).join(' ') + '</div>';
+    }
+    var lks = [];
+    for (var e = 0; e < edges.length; e++) {
+      var ed = edges[e];
+      if (ed.a === n) lks.push({ n: ed.b, t: ed.type, label: ed.label, dir: 'out' });
+      else if (ed.b === n) lks.push({ n: ed.a, t: ed.type, label: ed.label, dir: 'in' });
+    }
+
+    // 日记分组 / 日期节点：按天折叠，列出当天全部日记，不再受 18 条上限影响
+    if (n.cat === 'diary') {
+      function pad2(v) { return (v < 10 ? '0' : '') + v; }
+      function dayKey(title) {
+        var t = String(title || '');
+        var cn = t.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+        if (cn) return cn[1] + '-' + pad2(+cn[2]) + '-' + pad2(+cn[3]);
+        var iso = t.match(/(\d{4}-\d{2}-\d{2})/);
+        return iso ? iso[1] : '';
+      }
+      // 日记主节点通过 belongs 连线关联到当天的 📅 日期节点；新格式日记标题里没有日期，
+      // 用这条连线反查日期，旧格式（标题自带日期）则交给 dayKey 兜底
+      var diaryToDate = {};
+      for (var be = 0; be < edges.length; be++) {
+        var bel = edges[be];
+        if (bel.type !== 'belongs') continue;
+        if (/^📅/.test(String((bel.b && bel.b.title) || ''))) diaryToDate[bel.a.id] = bel.b;
+        else if (/^📅/.test(String((bel.a && bel.a.title) || ''))) diaryToDate[bel.b.id] = bel.a;
+      }
+      function entryDay(entry) {
+        var parent = diaryToDate[entry.id];
+        if (parent) {
+          var dk = dayKey(parent.title);
+          if (dk) return dk;
+        }
+        return dayKey(entry.title);
+      }
+      var days = [];
+      var dayMap = {};
+      function ensureDay(key, label) {
+        var k = key || '未知日期';
+        if (!dayMap[k]) {
+          dayMap[k] = { key: k, label: label || k, entries: [] };
+          days.push(dayMap[k]);
+        }
+        return dayMap[k];
+      }
+      function addEntry(entry) {
+        var key = entryDay(entry);
+        ensureDay(key, key).entries.push(entry);
+      }
+      if (n.isGroup) {
+        nodes.forEach(function (dn) {
+          if (dn.isGroup || dn.cat !== 'diary') return;
+          if (/^📅/.test(dn.title)) ensureDay(dayKey(dn.title), String(dn.title).replace(/^📅\s*/, ''));
+          else addEntry(dn);
+        });
+      } else if (/^📅/.test(n.title)) {
+        var selKey = dayKey(n.title);
+        ensureDay(selKey, String(n.title).replace(/^📅\s*/, ''));
+        nodes.forEach(function (dn) {
+          if (dn.isGroup || dn.cat !== 'diary') return;
+          if (/^📅/.test(dn.title)) return;
+          if (entryDay(dn) === selKey) dayMap[selKey].entries.push(dn);
+        });
+      }
+      if (days.length) {
+        days.sort(function (a, b) { return a.key < b.key ? 1 : -1; });
+        var total = 0;
+        days.forEach(function (day) {
+          day.entries.sort(function (a, b) { return a.title < b.title ? 1 : -1; });
+          total += day.entries.length;
+        });
+        html += '<div class="sec-t" style="margin-top:14px">日记 · ' + days.length + ' 天 / ' + total + ' 篇</div><div class="days">';
+        days.forEach(function (day, di) {
+          html += '<details class="dayblock"' + (di === 0 ? ' open' : '') + '><summary>' + esc(day.label) + ' · ' + day.entries.length + ' 篇</summary><div class="links">';
+          day.entries.forEach(function (kid) {
+            var kc = CATS[kid.cat] ? CATS[kid.cat].color : color;
+            html += '<div class="lk" data-id="' + kid.id + '"><span class="dot" style="background:' + kc + '"></span><span>' + esc(kid.title) + '</span><span class="ty">日记</span></div>';
+          });
+          if (!day.entries.length) html += '<div class="lk" style="color:var(--dim);cursor:default">这一天还没有日记</div>';
+          html += '</div></details>';
+        });
+        html += '</div>';
+        lks = lks.filter(function (l) { return l.t !== 'part_of'; });
+      }
+    }
+    if (lks.length) {
+      html += '<div class="sec-t" style="margin-top:14px">关联 ' + lks.length + '</div><div class="links">';
+      lks.slice(0, 18).forEach(function (l) {
+        var c = CATS[l.n.cat].color;
+        html += '<div class="lk" data-id="' + l.n.id + '"><span class="dot" style="background:' + c + '"></span><span>' + esc(l.n.title) + '</span><span class="ty">' + esc(l.label || l.t) + '</span>' +
+          (l.t === 'relates' ? '<button class="unlink" data-rel="' + l.n.id + '" title="解除关联">×</button>' : '') + '</div>';
+      });
+      html += '</div>';
+    }
+    detail.innerHTML = html;
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // 底部图例：按当前分层动态生成，避免写死旧项目的分层
+  function renderLegend() {
+    var el = document.getElementById('legend');
+    if (!el) return;
+    var html = '<span><i style="background:' + CATS.hub.color + '"></i>' + esc(CATS.hub.label) + '</span>';
+    LAYERS.forEach(function (cat) {
+      var c = CATS[cat];
+      if (!c) return;
+      html += '<span><i style="background:' + c.color + '"></i>' + esc(c.label) + '</span>';
+    });
+    el.innerHTML = html;
+  }
+
+  function mixColor(base, tint, t) {
+    function hex(v) { v = v.replace('#', ''); return [parseInt(v.slice(0, 2), 16), parseInt(v.slice(2, 4), 16), parseInt(v.slice(4, 6), 16)]; }
+    var a = hex(base), b = hex(tint), o = [];
+    for (var i = 0; i < 3; i++) o.push(Math.round(a[i] + (b[i] - a[i]) * t));
+    return 'rgb(' + o.join(',') + ')';
+  }
+
+  // ---------- 检索 UI ----------
+  var input = document.getElementById('q');
+  var results = document.getElementById('results');
+  var timer = null;
+
+  function runSearch() {
+    var q = input.value.trim();
+    if (!q) {
+      state.search = null;
+      results.innerHTML = '';
+      renderList();
+      return;
+    }
+    var r = search(q);
+    if (!r || !r.hits.length) {
+      state.search = { q: q, hits: [], map: {}, matched: {} };
+      results.innerHTML = '<div class="empty">没有命中。试试「幻视」「序列」「记忆」「潜能」。</div>';
+      return;
+    }
+    var map = {}, matched = {};
+    r.hits.forEach(function (h) { map[h.n.id] = h.score; matched[h.n.id] = h.matched; });
+    state.search = { q: q, hits: r.hits, map: map, matched: matched, max: r.max };
+    results.innerHTML = r.hits.slice(0, 12).map(function (h) {
+      return '<div class="res" data-id="' + h.n.id + '"><span class="dot" style="background:' + CATS[h.n.cat].color + '"></span><span class="rt">' + esc(h.n.title) + '</span><span class="rs">' + Math.round(h.score) + '</span></div>';
+    }).join('');
+    renderList();
+  }
+
+  input.addEventListener('input', function () {
+    clearTimeout(timer);
+    timer = setTimeout(runSearch, 140);
+  });
+  document.getElementById('clr').addEventListener('click', function () {
+    input.value = '';
+    runSearch();
+    input.focus();
+  });
+
+  // 分类筛选
+  var catsBox = document.getElementById('cats');
+  var counts = {};
+  nodes.forEach(function (n) { if (!n.isGroup) counts[n.cat] = (counts[n.cat] || 0) + 1; });
+  catsBox.innerHTML = '<button class="chip hubchip" data-cat="hub" style="color:' + CATS.hub.color + '"><span class="dot"></span><span class="lbl">' + CATS.hub.label + '</span><span class="cn">中心</span></button>' + LAYERS.map(function (cat) {
+    return '<button class="chip" data-cat="' + cat + '" style="color:' + CATS[cat].color + '"><span class="box" data-act="toggle"></span><span class="dot"></span><span class="lbl">' + CATS[cat].label + '</span><span class="cn">' + (counts[cat] || 0) + '</span></button>';
+  }).join('');
+  catsBox.addEventListener('click', function (e) {
+    var chip = e.target && e.target.closest ? e.target.closest('.chip') : null;
+    if (!chip) return;
+    var c = chip.getAttribute('data-cat');
+    // 小方框：切换该层显示 / 隐藏
+    if (e.target.closest('.box')) {
+      hidden[c] = !hidden[c];
+      chip.classList.toggle('off', !!hidden[c]);
+      if (hidden[c] && state.selected && state.selected.cat === c) select(null, false);
+      renderList();
+      return;
+    }
+    // 点击文字：在图中选中该层（观测点单独处理）；若被隐藏则先恢复显示
+    if (c !== 'hub' && hidden[c]) {
+      hidden[c] = false;
+      chip.classList.remove('off');
+      renderList();
+    }
+    var target = c === 'hub' ? hub : byId['g_' + c];
+    if (target) select(target, false);
+  });
+
+  // 左侧分层列表与图中选中状态同步
+  function syncCats() {
+    var box = document.getElementById('cats');
+    if (!box) return;
+    var sel = state.selected;
+    Array.prototype.forEach.call(box.querySelectorAll('.chip'), function (el) {
+      var cat = el.getAttribute('data-cat');
+      var on = !!(sel && (cat === 'hub' ? sel.id === 'hub' : (sel.isGroup && sel.id === 'g_' + cat)));
+      el.classList.toggle('on', on);
+    });
+  }
+
+  // 显示控件
+  document.getElementById('size').addEventListener('input', function (e) {
+    state.size = parseFloat(e.target.value);
+  });
+  document.getElementById('labels').addEventListener('change', function (e) {
+    state.showLabels = e.target.checked;
+  });
+  document.getElementById('rotate').addEventListener('change', function (e) {
+    state.autoRotate = e.target.checked;
+  });
+  document.getElementById('showrel').addEventListener('change', function (e) {
+    state.showRelates = e.target.checked;
+  });
+  document.getElementById('prune').addEventListener('change', function (e) {
+    state.prune = e.target.checked;
+  });
+  var allnames = document.getElementById('allnames');
+  allnames.addEventListener('click', function () {
+    state.allLabels = !state.allLabels;
+    allnames.classList.toggle('on', state.allLabels);
+    allnames.textContent = state.allLabels ? '恢复默认' : '显示全部';
+  });
+  document.getElementById('reset').addEventListener('click', function () {
+    cam.yaw = -0.62; cam.pitch = 0.2; cam.zoom = 1; cam.px = 0; cam.py = 0;
+  });
+
+  // 视图
+  function setView(v) {
+    var was2D = is2D();
+    state.view = v;
+    Array.prototype.forEach.call(document.querySelectorAll('.view-btn[data-view]'), function (b) {
+      b.classList.toggle('on', b.getAttribute('data-view') === v);
+    });
+    var lv = document.getElementById('listview');
+    var dv = document.getElementById('docview');
+    if (v === 'list' || v === 'doc') {
+      lv.classList.toggle('on', v === 'list');
+      dv.classList.toggle('on', v === 'doc');
+      canvas.style.visibility = 'hidden';
+      document.getElementById('hint').style.display = 'none';
+      document.getElementById('legend').style.display = 'none';
+      if (v === 'list') renderList(); else renderDoc();
+    } else {
+      lv.classList.remove('on');
+      dv.classList.remove('on');
+      canvas.style.visibility = 'visible';
+      document.getElementById('hint').style.display = '';
+      document.getElementById('legend').style.display = is2D() ? 'none' : '';
+      if (is2D()) {
+        cam.px = 0; cam.py = 0; cam.zoom = 1;
+        state.hover = null;
+        tip.style.opacity = 0;
+        document.getElementById('hint').textContent = v === 'matrix'
+          ? '行 / 列 = 分层 · 亮度 = 跨层关联数量 · 拖动平移 · 滚轮缩放'
+          : v === 'sunburst'
+            ? '内圈 观测点 · 中环 分层 · 外环 条目 · 拖动平移 · 滚轮缩放'
+            : '点击分层展开 / 收起 · 拖动平移 · 滚轮缩放';
+      } else {
+        if (was2D) { cam.px = 0; cam.py = 0; cam.zoom = 1; }
+        document.getElementById('hint').textContent = '拖动旋转 · 滚轮缩放 · 中键/右键平移 · 单击查看';
+        if (v === 'galaxy') { cam.pitch = 0.45; layoutGalaxy(); }
+        else if (v === 'cluster') layoutCluster();
+        else if (v === 'nebula') { layoutGalaxy(); var tmp = []; nodes.forEach(function (n) { tmp.push([n.tx, n.ty, n.tz]); }); nodes.forEach(function (n, i) { n.x = tmp[i][0]; n.y = tmp[i][1]; n.z = tmp[i][2]; }); }
+      }
+      settleFrames = 0;
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.view-btn[data-view]'), function (b) {
+    b.addEventListener('click', function () { setView(b.getAttribute('data-view')); });
+  });
+
+  // 列表视图
+  var listview = document.getElementById('listview');
+  function renderList() {
+    if (state.view === 'doc') { renderDoc(); return; }
+    if (state.view !== 'list') return;
+    var st = state.search;
+    var groups = {};
+    nodes.forEach(function (n) {
+      if (n.isGroup || hidden[n.cat]) return;
+      if (st && !st.map[n.id]) return;
+      (groups[n.cat] = groups[n.cat] || []).push(n);
+    });
+    var html = '';
+    var any = false;
+    LAYERS.forEach(function (cat) {
+      var g = groups[cat];
+      if (!g || !g.length) return;
+      if (cat === 'diary') {
+        g.sort(function (a, b) {
+          function parts(n) {
+            var s = String(n.title || '');
+            var isDate = /^📅/.test(s);
+            var dm = s.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/) || s.match(/(\d{4})-(\d{2})-(\d{2})/);
+            var key = dm ? dm[1] + ('0' + +dm[2]).slice(-2) + ('0' + +dm[3]).slice(-2) : '';
+            var tm = s.match(/(\d{1,2}):(\d{2})/);
+            return { key: key, mins: tm ? (+tm[1]) * 60 + (+tm[2]) : 0, isDate: isDate, la: n.la || 0 };
+          }
+          var pa = parts(a), pb = parts(b);
+          if (pa.key && pb.key && pa.key !== pb.key) return pa.key < pb.key ? 1 : -1;
+          if (pa.key !== pb.key) return pa.key ? -1 : 1;
+          if (pa.isDate !== pb.isDate) return pa.isDate ? -1 : 1;
+          if (pa.mins !== pb.mins) return pb.mins - pa.mins;
+          return pb.la - pa.la;
+        });
+      }
+      any = true;
+      html += '<div class="lv-group"><div class="lv-head"><span class="dot" style="background:' + CATS[cat].color + ';box-shadow:0 0 8px ' + CATS[cat].color + '"></span>' + CATS[cat].label + '<span class="n">' + g.length + '</span></div><div class="lv-grid">';
+      g.forEach(function (n) {
+        var dim = st ? '' : (pruneStrength(n) < 0.5 ? ' dim' : '');
+        html += '<button class="card' + dim + '" data-id="' + n.id + '"><div class="ct">' + esc(n.title) + '</div><div class="cd">' + esc(moodDesc(n)) + '</div></button>';
+      });
+      html += '</div></div>';
+    });
+    if (!any) html = '<div class="empty">当前筛选下没有内容。清空检索或打开一些分层。</div>';
+    listview.innerHTML = html;
+  }
+
+  // Markdown 阅读视图：把同一份内容排版成可读文档
+  var docview = document.getElementById('docview');
+
+  // 极简 Markdown：粗体、行内代码、无序列表、空行分段
+  function mdText(s) {
+    if (!s) return '';
+    var t = esc(s).replace(/`([^`\n]+)`/g, '<code>$1</code>').replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
+    return t.split(/\n{2,}/).map(function (block) {
+      block = block.trim();
+      if (!block) return '';
+      var ls = block.split('\n');
+      var bullet = true;
+      for (var i = 0; i < ls.length; i++) {
+        if (!/^\s*[-*+]\s+/.test(ls[i])) { bullet = false; break; }
+      }
+      if (bullet) {
+        return '<ul>' + ls.map(function (l) {
+          return '<li>' + l.trim().replace(/^[-*+]\s+/, '') + '</li>';
+        }).join('') + '</ul>';
+      }
+      return '<p>' + ls.join('<br>') + '</p>';
+    }).join('');
+  }
+
+  function renderDoc() {
+    if (state.view !== 'doc') return;
+    var st = state.search;
+    var shown = {};
+    var total = 0;
+    nodes.forEach(function (n) {
+      if (n.isGroup || hidden[n.cat]) return;
+      if (st && !st.map[n.id]) return;
+      shown[n.id] = 1;
+      total++;
+    });
+    var groups = {};
+    nodes.forEach(function (n) { if (shown[n.id]) (groups[n.cat] = groups[n.cat] || []).push(n); });
+    var visEdges = 0;
+    edges.forEach(function (e) { if (shown[e.a.id] && shown[e.b.id]) visEdges++; });
+    var d = new Date();
+    function pad(v) { return (v < 10 ? '0' : '') + v; }
+    var date = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+
+    var html = '<div class="doc">';
+    html += '<div class="doc-kicker">' + TEMPLATE.title + ' · Markdown 阅读视图</div>';
+    html += '<h1>' + esc(hub.title) + '</h1>';
+    html += '<div class="doc-meta">' + total + ' 条内容 · ' + visEdges + ' 条连线 · ' + LAYERS.length + ' 个分层 · ' + date + '</div>';
+    if (hub.desc || hub.content) {
+      html += '<div class="doc-intro">';
+      if (hub.desc) html += '<p>' + esc(hub.desc) + '</p>';
+      if (hub.content) html += '<div class="doc-body">' + mdText(hub.content) + '</div>';
+      html += '</div>';
+    }
+    var toc = '';
+    LAYERS.forEach(function (cat) {
+      var g = groups[cat];
+      if (!g || !g.length) return;
+      toc += '<button data-scroll="' + cat + '"><i style="background:' + CATS[cat].color + '"></i>' + esc(CATS[cat].label) + '<span>' + g.length + '</span></button>';
+    });
+    if (toc) html += '<div class="doc-toc">' + toc + '</div>';
+
+    var any = false;
+    LAYERS.forEach(function (cat) {
+      var g = groups[cat];
+      if (!g || !g.length) return;
+      any = true;
+      html += '<h2 id="doc_cat_' + cat + '"><span class="mark" style="background:' + CATS[cat].color + '"></span>' + esc(CATS[cat].label) + '<span class="n">' + g.length + ' 条</span></h2>';
+      g.forEach(function (n) {
+        html += '<article class="doc-entry"><h3>' + esc(n.title) + (n.flag ? '<span class="tag">' + esc(n.flag) + '</span>' : '') + '</h3>';
+        if (moodDesc(n)) html += '<p class="d">' + esc(moodDesc(n)) + '</p>';
+        if (n.content) html += '<div class="doc-body">' + mdText(n.content) + '</div>';
+        var rel = [];
+        edges.forEach(function (e) {
+          if (e.type !== 'relates' && e.type !== 'same_name') return;
+          var other = e.a === n ? e.b : (e.b === n ? e.a : null);
+          if (!other || !shown[other.id]) return;
+          rel.push('<button data-docid="' + other.id + '">' + esc(other.title) + '</button>');
+        });
+        if (rel.length) html += '<div class="doc-rel">关联：' + rel.join('') + '</div>';
+        html += '</article>';
+      });
+    });
+    if (!any) html += '<p class="doc-empty">当前筛选下没有内容。清空检索或打开一些分层。</p>';
+    html += '</div>';
+    docview.innerHTML = html;
+  }
+
+  docview.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t || !t.closest) return;
+    var rel = t.closest('[data-docid]');
+    if (rel) {
+      var n = byId[rel.getAttribute('data-docid')];
+      if (n) { if (linkingFrom) commitLink(n); else select(n, true); }
+      return;
+    }
+    var jump = t.closest('[data-scroll]');
+    if (jump) {
+      var head = docview.querySelector('#doc_cat_' + jump.getAttribute('data-scroll'));
+      if (head) head.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+
+  // 统一用事件委托：列表重绘后监听不会丢
+  results.addEventListener('click', function (e) {
+    var row = e.target && e.target.closest ? e.target.closest('.res') : null;
+    if (!row) return;
+    var n = byId[row.getAttribute('data-id')];
+    if (n) { if (linkingFrom) commitLink(n); else select(n, true); }
+  });
+  detail.addEventListener('click', function (e) {
+    var un = e.target && e.target.closest ? e.target.closest('.unlink') : null;
+    if (un) {
+      if (!state.selected) return;
+      var other = byId[un.getAttribute('data-rel')];
+      if (other) removeRelate(state.selected, other);
+      return;
+    }
+    var act = e.target && e.target.closest ? e.target.closest('.act') : null;
+    if (act) {
+      if (!state.selected) return;
+      var what = act.getAttribute('data-act');
+      if (what === 'edit') openModal(state.selected);
+      else if (what === 'link') startLink(state.selected);
+      else if (what === 'del-layer') deleteLayer(state.selected);
+      else deleteNode(state.selected);
+      return;
+    }
+    var row = e.target && e.target.closest ? e.target.closest('.lk') : null;
+    if (!row) return;
+    var t = byId[row.getAttribute('data-id')];
+    if (!t) return;
+    if (linkingFrom) { commitLink(t); return; }
+    select(t, true);
+    if (state.view === 'list') setView('galaxy');
+  });
+  listview.addEventListener('click', function (e) {
+    var card = e.target && e.target.closest ? e.target.closest('.card') : null;
+    if (!card) return;
+    var n = byId[card.getAttribute('data-id')];
+    if (n) { if (linkingFrom) commitLink(n); else select(n, true); }
+  });
+
+  // ---------- 增删改 ----------
+  var modal = document.getElementById('modal');
+  var mTitle = document.getElementById('m-title');
+  var fTitle = document.getElementById('f-title');
+  var fCat = document.getElementById('f-cat');
+  var fDesc = document.getElementById('f-desc');
+  var fContent = document.getElementById('f-content');
+  var fW = document.getElementById('f-w');
+  var fWv = document.getElementById('f-wv');
+  var fFlag = document.getElementById('f-flag');
+  var toastEl = document.getElementById('toast');
+  var toastTimer = null;
+  var editing = null;
+
+  function fillCatOptions() {
+    fCat.innerHTML = LAYERS.map(function (c) {
+      return '<option value="' + c + '">' + esc(CATS[c].label) + '</option>';
+    }).join('');
+  }
+  fillCatOptions();
+
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('on'); }, 1800);
+  }
+
+  function openModal(n) {
+    editing = n || null;
+    var isFixed = !!n && (n.isGroup || n.cat === 'hub');
+    mTitle.textContent = n ? (n.cat === 'hub' ? '编辑观测点' : n.isGroup ? '编辑分层' : '编辑节点') : '新增节点';
+    fillCatOptions();
+    if (isFixed && LAYERS.indexOf(n.cat) < 0) {
+      fCat.innerHTML = '<option value="' + n.cat + '">' + esc(n.cat === 'hub' ? '观测点' : n.title) + '</option>' + fCat.innerHTML;
+    }
+    fTitle.value = n ? n.title : '';
+    fCat.value = n ? n.cat : (state.selected && state.selected.cat !== 'hub' ? state.selected.cat : 'tgh');
+    if (!isFixed && !fCat.value) fCat.value = LAYERS[0] || 'activity';
+    fCat.disabled = isFixed;
+    fDesc.value = n ? n.desc : '';
+    fContent.value = n ? (n.content || '') : '';
+    fW.value = n ? n.w : 0.6;
+    fWv.textContent = Number(fW.value).toFixed(2);
+    fFlag.value = (n && n.flag) ? n.flag : '';
+    modal.classList.add('on');
+    setTimeout(function () { fTitle.focus(); }, 30);
+  }
+
+  function closeModal() {
+    modal.classList.remove('on');
+    editing = null;
+  }
+
+  function newId() {
+    var i = 0, id;
+    do {
+      i++;
+      id = 'u' + Date.now().toString(36) + i;
+    } while (byId[id]);
+    return id;
+  }
+
+  function syncLabel(s, text) {
+    var el = document.getElementById('sync');
+    var tx = document.getElementById('sync-text');
+    if (el) el.className = 'sync ' + s;
+    if (tx) {
+      tx.textContent = text || {
+        server: '服务器已同步', local: '仅本机', saving: '同步中…',
+        error: '同步失败', offline: '未连接服务器'
+      }[s] || s;
+    }
+  }
+
+  function applyGraph() {
+    buildIndex();
+    select(null, false);
+    relayout();
+    updateStats();
+    if (input.value.trim()) runSearch();
+    else { state.search = null; results.innerHTML = ''; renderList(); }
+  }
+
+  function pushToServer() {
+    if (!canFetch) { syncLabel('local'); return Promise.resolve(false); }
+    var headers = { 'Content-Type': 'application/json' };
+    if (WRITE_TOKEN) headers['x-write-token'] = WRITE_TOKEN;
+    return fetch('/api/graph?preset=' + preset, {
+      method: 'PUT',
+      headers: headers,
+      body: JSON.stringify(snapshot())
+    }).then(function (r) {
+      syncLabel(r.ok ? 'server' : 'error');
+      return r.ok;
+    }).catch(function () {
+      syncLabel('error');
+      return false;
+    });
+  }
+
+  var saveTimer = null;
+  function saveToServer() {
+    if (demoMode) return;
+    if (!canFetch) { syncLabel('local'); return; }
+    syncLabel('saving');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      pushToServer().then(function (ok) {
+        if (!ok) toast('同步到服务器失败，改动已存在本机');
+      });
+    }, 350);
+  }
+
+  function loadFromServer() {
+    if (!canFetch) { syncLabel('local'); return; }
+    syncLabel('saving', '连接服务器…');
+    fetch('/api/graph?preset=' + preset, { cache: 'no-store' }).then(function (r) {
+      if (r.status === 404) {
+        if (preset === 'full' && !window.__NNAO_LOADED_SAVE__) { seedFull(); return null; }
+        syncLabel('local', '服务器空库');
+        return null;
+      }
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function (s) {
+      if (!s) return;
+      if (preset === 'full' && s.rev !== FULL_REV) { seedFull(); return; }
+      if (!restoreSnapshot(s)) { syncLabel('error', '服务器数据格式不对'); return; }
+      applyGraph();
+      nodes.forEach(function (n) { n.x = n.tx; n.y = n.ty; n.z = n.tz; });
+      syncLabel('server');
+      toast('已载入服务器数据');
+    }).catch(function () {
+      syncLabel('offline');
+    });
+  }
+
+  function seedFull() {
+    syncLabel('saving', '生成全量版…');
+    var lite = null;
+    fetch('/api/graph?preset=lite', { cache: 'no-store' }).then(function (r) {
+      return r.ok ? r.json() : null;
+    }).catch(function () { return null; }).then(function (s) {
+      var full = buildFull(s || snapshot());
+      restoreSnapshot(full);
+      applyGraph();
+      nodes.forEach(function (n) { n.x = n.tx; n.y = n.ty; n.z = n.tz; });
+      safeSet(presetKey(), JSON.stringify(snapshot()));
+      return pushToServer();
+    }).then(function () {
+      syncLabel('server');
+      toast('已生成全量版并保存到服务器');
+    }).catch(function () { syncLabel('error'); });
+  }
+
+  function persist() {
+    if (demoMode) return;
+    if (!safeSet(presetKey(), JSON.stringify(snapshot()))) {
+      toast('本机存储不可用，改动只在本次打开有效');
+    }
+    saveToServer();
+  }
+
+  // 本地演示数据：不写本机、不写服务器，刷新即恢复真实数据
+  function buildDemoSnapshot() {
+    var ns = [], es = [];
+    var nowMs = Date.now();
+    function addNode(id, title, desc, cat, w, isGroup, content, laDays) {
+      ns.push({
+        id: id, title: title, desc: desc || '', content: content || null, cat: cat,
+        w: w, g: isGroup ? 1 : 0, m: null, f: null,
+        la: nowMs - (typeof laDays === 'number' ? laDays : 3) * 86400000
+      });
+    }
+    function link(a, b, type) { es.push([a, b, type || 'relates']); }
+
+    addNode('hub', '观测点', '整台记忆海的中心，也是正在观看的那一点。', 'hub', 1, 1, null, 0);
+    LAYERS.forEach(function (cat) {
+      addNode('g_' + cat, CATS[cat].label, LAYER_INTRO[cat] || '演示分层。', cat, 0.95, 1, null, 0);
+      link('hub', 'g_' + cat, 'controls');
+    });
+
+    // 主角：令杰，28 岁男生；最近 14 天、每天 3 篇日记
+    var D_TIME = ['07:40', '12:30', '22:10'];
+    var D_TOPICS = [
+      ['晨跑回来没立刻刷手机', '沿着河边慢跑三公里，回来先喝了水，才打开手机。'],
+      ['煮了咖啡，在阳台发呆', '没有开电脑，站了十分钟看楼下的车流。'],
+      ['地铁上听完一期播客', '讲的是睡眠和精力管理，记下了两个要点。'],
+      ['出门前写下今天三件事', '把最重要的三件写进便签，其他先不管。'],
+      ['早饭认真吃了', '两个鸡蛋一杯牛奶，比路上买包子踏实。'],
+      ['开会时被临时点名', '没有准备，回答得有点乱，会后补了两句。'],
+      ['和同事在楼下吃面', '聊到房租和通勤，发现大家都差不多。'],
+      ['午休没睡着，闭眼十分钟', '脑子还在转，但至少让眼睛休息了一会儿。'],
+      ['方案改到第三版', '删掉一半功能，反而更清楚要做什么。'],
+      ['收到客户一句「可以」', '等了三天，看到这两个字时松了口气。'],
+      ['下午三点犯困', '下楼走了两圈，回来才把注意力拉回来。'],
+      ['帮小周看了一段代码', '顺手指出一个边界问题，他说省了半天。'],
+      ['下班路上买了菜', '西红柿和鸡蛋，想着回去做一碗面。'],
+      ['做了番茄炒蛋，盐放多了', '味道偏咸，但还是吃完了，锅也刷干净。'],
+      ['和小鹿通了个电话', '她最近换了新工作，说压力大但状态不错。'],
+      ['去健身房练了背', '重量不大，练完肩背松了一些。'],
+      ['把房间拖了一遍', '看着地板发亮，心里也跟着清爽。'],
+      ['看了半部电影', '没看完就困了，留着明天接着看。'],
+      ['和妈妈视频了二十分钟', '她又问有没有好好吃饭，我说有。'],
+      ['洗完澡坐在窗边', '头发还湿着，听楼下有人遛狗。'],
+      ['把下周计划写进日历', '给重要的事留了整块时间，不再堆在一起。'],
+      ['想起大学时的一个朋友', '翻到他的朋友圈，犹豫要不要发条消息。'],
+      ['十一点前关了灯', '睡前没看工作群，入睡比平时快。'],
+      ['翻到一张旧照片', '是刚工作那年拍的，人比现在瘦。'],
+      ['楼下有小孩在放烟花', '响了一声，我在窗边看了半天。'],
+      ['睡前读了两页书', '不多，但把脑子从工作里拔出来了。'],
+      ['阿哲约周末爬山', '他说想走走，顺便聊聊换工作的事。'],
+      ['林姐把节奏放慢了', '她说这次不赶，先把可用版本做出来。'],
+      ['晨会只开了十五分钟', '效率高，问题当场就定了。'],
+      ['收到一笔意外的报销', '不多，但够请自己吃顿好的。'],
+      ['地铁上有人给老人让座', '看见这一幕，心情莫名好了一点。'],
+      ['把旧衣服整理出来', '装了两袋，准备周末送去回收。'],
+      ['晚饭只吃了水果', '不太饿，也不想勉强自己。'],
+      ['整理待办清单', '删掉三件其实不重要的事。'],
+      ['雨下了一整天', '没出门，窗外的声音把房间衬得很安静。'],
+      ['和老王在楼道聊了两句', '他说最近腰不好，劝我别久坐。'],
+      ['给绿萝浇了水', '叶子有点蔫，浇完第二天就挺起来了。'],
+      ['试了新开的面馆', '汤头不错，下次想带阿哲来。'],
+      ['把周报写完', '列出来才发现这周做了不少事。'],
+      ['晚上有点想家', '给家里发了条消息，说这周会回去。'],
+      ['看完一本薄书', '不长，但有几页做了标记。'],
+      ['睡前把手机放远', '充电放在桌子上，躺下后没再摸。']
+    ];
+    var diaryIds = [], dateIds = [];
+    var diaryBase = Date.UTC(2026, 9, 19);
+    function dp2(v) { return (v < 10 ? '0' : '') + v; }
+    for (var dd = 0; dd < 8; dd++) {
+      var dobj = new Date(diaryBase + dd * 86400000);
+      var dy = dobj.getUTCFullYear(), dmo = dobj.getUTCMonth() + 1, dda = dobj.getUTCDate();
+      var isoD = dy + '-' + dp2(dmo) + '-' + dp2(dda);
+      var dateId = 'demo_date_' + dd;
+      addNode(dateId, '📅 ' + isoD, '当天的日记归集节点。', 'diary', 0.8, 0, null, 14 - dd);
+      link(dateId, 'g_diary', 'part_of');
+      dateIds.push(dateId);
+      for (var de = 0; de < 3; de++) {
+        var tp2 = D_TOPICS[dd * 3 + de];
+        var did = 'demo_diary_' + dd + '_' + de;
+        addNode(did, '📝 ' + D_TIME[de] + ' ' + tp2[0], tp2[0], 'diary', 0.9, 0, tp2[1], 14 - dd);
+        link(did, 'g_diary', 'part_of');
+        link(did, dateId, 'belongs');
+        diaryIds.push(did);
+      }
+    }
+
+    var sets = { activity: [], body: [], emotion: [], people: [], knowledge: [], goal: [], dream: [] };
+    var A_PRE = ['清晨', '上午', '午后', '傍晚', '下班后', '周末', '睡前', '起床后'];
+    var A_ACT = ['慢跑', '做早饭', '通勤', '开会', '写方案', '复盘', '读书', '做饭', '洗衣服', '整理房间', '散步', '听播客'];
+    var B_PRE = ['早晨', '午后', '傍晚', '夜里', '久坐后', '运动后', '开会前', '吃完后'];
+    var B_ST = ['睡眠不足', '肩颈发紧', '注意力下降', '口渴', '心跳偏快', '眼睛干涩', '肠胃不适', '腿酸', '精力恢复', '头有点沉', '呼吸变浅', '犯困'];
+    var E_MOOD = ['平静', '焦虑', '满足', '烦躁', '期待', '孤单', '内疚', '安心', '疲惫', '雀跃', '低落', '释然'];
+    var E_SRC = ['跑完步', '开完会', '做完饭', '收到反馈', '被临时打断', '夜里独处', '和妈妈通话', '写完日记', '看到夕阳', '听完播客'];
+    var P_NAME = ['林姐', '阿哲', '妈妈', '小周', '老王', '小鹿', '老陈', '小许', '阿宁', '表姐', '大学室友', '同事小唐', '健身教练', '理发师', '房东', '医生', '快递小哥', '咖啡店老板', '邻居阿姨', '楼下保安'];
+    var P_CTX = ['项目复盘', '散步聊天', '晚间电话', '会后补台', '楼道打招呼', '电梯偶遇', '微信问候', '一起吃饭', '周末爬山', '线上会议', '借书', '搬家帮忙'];
+    var K_TOPIC = ['认知负荷', '复盘方法', '睡眠周期', '微习惯', '深度工作', '情绪粒度', '反馈循环', '时间块', '第二大脑', '刻意练习', '间隔重复', '心流', '损失厌恶', '沉没成本', '复利', '锚定效应', '元认知', '注意力残留', '蔡格尼克效应', '成长型思维'];
+    var K_LENS = ['工作场景', '日常生活', '自我观察'];
+    var G_GOAL = ['每周跑步三次', '十一点前睡', '读完一本书', '项目按期上线', '存一笔应急金', '学会三道家常菜', '减少刷手机', '每天写两百字', '每周复盘一次', '练习正念十分钟', '整理一次房间', '记录每日开销', '每周联系一位朋友', '晨间不看手机', '按时吃早饭', '每天走八千步'];
+    var D_FRAG = ['迷路的老房子', '海上列车', '和陌生人吃饭', '找不到出口', '飞过城市', '重复出现的教室', '从高处坠落', '考试迟到', '牙齿脱落', '水淹进房间', '被什么人追赶', '遇见已故的亲人', '镜子里的另一个人', '无边泳池'];
+
+    for (var ai = 0; ai < 20; ai++) {
+      var at = A_PRE[ai % A_PRE.length] + A_ACT[Math.floor(ai / A_PRE.length) % A_ACT.length];
+      sets.activity.push([at, '记录一次「' + at + '」，不急，但做完了。']);
+    }
+    for (var bi = 0; bi < 12; bi++) {
+      var bt = B_PRE[bi % B_PRE.length] + ' · ' + B_ST[Math.floor(bi / B_PRE.length) % B_ST.length];
+      sets.body.push([bt, '身体信号：' + bt + '。']);
+    }
+    for (var eidx = 0; eidx < 20; eidx++) {
+      var et = E_MOOD[eidx % E_MOOD.length] + ' · ' + E_SRC[Math.floor(eidx / E_MOOD.length) % E_SRC.length];
+      sets.emotion.push([et, '情绪记录：' + et + '。']);
+    }
+    for (var pidx = 0; pidx < 14; pidx++) {
+      var pn = P_NAME[pidx % P_NAME.length];
+      var pc = P_CTX[Math.floor(pidx / P_NAME.length) % P_CTX.length];
+      sets.people.push([pn + ' · ' + pc, '和' + pn + '有一次「' + pc + '」。']);
+    }
+    for (var kidx = 0; kidx < 12; kidx++) {
+      var kt0 = K_TOPIC[kidx % K_TOPIC.length];
+      var kl0 = K_LENS[Math.floor(kidx / K_TOPIC.length) % K_LENS.length];
+      sets.knowledge.push([kt0 + ' · ' + kl0, '在「' + kl0 + '」里理解' + kt0 + '。']);
+    }
+    for (var gidx = 0; gidx < 10; gidx++) {
+      sets.goal.push([G_GOAL[gidx], '目标：' + G_GOAL[gidx] + '，先做一小步。']);
+    }
+    for (var didx = 0; didx < 8; didx++) {
+      sets.dream.push([D_FRAG[didx], '梦到' + D_FRAG[didx] + '，醒来还留有一点余味。']);
+    }
+    var entIds = {};
+    Object.keys(sets).forEach(function (cat) {
+      entIds[cat] = [];
+      sets[cat].forEach(function (it, i) {
+        var id = 'demo_' + cat + '_' + i;
+        entIds[cat].push(id);
+        addNode(id, it[0], it[1], cat, 0.55, 0, i % 4 === 0 ? it[1] + '\n\n这是演示数据，可展开查看说明。' : null, i % 21);
+        link(id, 'g_' + cat, 'part_of');
+      });
+    });
+
+    // 日记与实体的关联：每篇 2 条
+    var dSeed = 20261106;
+    function drnd() { dSeed = (dSeed * 1664525 + 1013904223) >>> 0; return dSeed / 4294967296; }
+    var dCats = ['activity', 'body', 'emotion', 'people', 'knowledge', 'goal', 'dream'];
+    diaryIds.forEach(function (did, k) {
+      var c1 = dCats[k % dCats.length];
+      link(did, entIds[c1][Math.floor(drnd() * entIds[c1].length)], k % 2 === 0 ? 'contains' : 'relates');
+      var c2 = dCats[(k + 3) % dCats.length];
+      link(did, entIds[c2][Math.floor(drnd() * entIds[c2].length)], 'relates');
+    });
+
+    // 实体之间的跨层关联，补到目标总连线数（380）
+    var seen = {};
+    es.forEach(function (e) { seen[e[0] + '>' + e[1] + ':' + e[2]] = 1; });
+    var targetEdges = 380, tries = 0;
+    while (es.length < targetEdges && tries < targetEdges * 80) {
+      tries++;
+      var ca = dCats[Math.floor(drnd() * dCats.length)];
+      var cb = dCats[Math.floor(drnd() * dCats.length)];
+      var a = entIds[ca][Math.floor(drnd() * entIds[ca].length)];
+      var b = entIds[cb][Math.floor(drnd() * entIds[cb].length)];
+      if (a === b) continue;
+      var kk = a + '>' + b + ':relates';
+      if (seen[kk] || seen[b + '>' + a + ':relates']) continue;
+      link(a, b, 'relates');
+      seen[kk] = 1;
+    }
+
+    return {
+      v: 1,
+      savedAt: new Date().toISOString(),
+      layers: LAYERS.map(function (c) { return { id: c, label: CATS[c].label, color: CATS[c].color }; }),
+      nodes: ns,
+      edges: es
+    };
+  }
+
+  function loadDemo() {
+    demoMode = true;
+    clearTimeout(saveTimer);
+    var snap = buildDemoSnapshot();
+    if (!restoreSnapshot(snap)) {
+      demoMode = false;
+      toast('演示数据加载失败');
+      return;
+    }
+    applyGraph();
+    nodes.forEach(function (n) { n.x = n.tx; n.y = n.ty; n.z = n.tz; });
+    select(hub, false);
+    syncLabel('local', '演示数据 · 不会保存');
+    var btn = document.getElementById('demo');
+    if (btn) btn.textContent = '退出演示';
+    toast('已进入演示模式，数据不会写入本机或服务器');
+  }
+
+  function updateCounts() {
+    var c = {};
+    nodes.forEach(function (n) { if (!n.isGroup) c[n.cat] = (c[n.cat] || 0) + 1; });
+    catsBox.innerHTML = '<button class="chip hubchip" data-cat="hub" style="color:' + CATS.hub.color + '"><span class="dot"></span><span class="lbl">' + CATS.hub.label + '</span><span class="cn">中心</span></button>' + LAYERS.map(function (cat) {
+      return '<button class="chip" data-cat="' + cat + '" style="color:' + CATS[cat].color + '"><span class="box" data-act="toggle"></span><span class="dot"></span><span class="lbl">' + CATS[cat].label + '</span><span class="cn">' + (c[cat] || 0) + '</span></button>';
+    }).join('');
+    Array.prototype.forEach.call(catsBox.querySelectorAll('.chip'), function (el) {
+      el.classList.toggle('off', !!hidden[el.getAttribute('data-cat')]);
+    });
+    syncCats();
+  }
+
+  function updateStats() {
+    var content = nodes.filter(function (n) { return !n.isGroup; }).length;
+    document.getElementById('stats').innerHTML = '<b>' + content + '</b> 个内容节点 · <b>' +
+      nodes.length + '</b> 个光点 · <b>' + edges.length + '</b> 条连线' +
+      (TEMPLATE.source ? ' · 来源 ' + TEMPLATE.source : '');
+    updateCounts();
+  }
+
+  function touch() {
+    buildIndex();
+    if (input.value.trim()) runSearch();
+    else { state.search = null; results.innerHTML = ''; renderList(); }
+    updateStats();
+  }
+
+  function relayout() {
+    if (state.view === 'cluster') layoutCluster();
+    else if (state.view === 'galaxy' || state.view === 'nebula') layoutGalaxy();
+    settleFrames = 0;
+    warmLayout();
+  }
+
+  function addNodeFromForm() {
+    var title = fTitle.value.trim();
+    if (!title) { toast('标题不能为空'); fTitle.focus(); return; }
+    var n = mkNode(fCat.value, title, fDesc.value.trim() || '手动添加，暂无描述。', parseFloat(fW.value) || 0.6, { id: newId() });
+    n.content = fContent.value.trim();
+    if (fFlag.value.trim()) n.flag = fFlag.value.trim();
+    var g = byId['g_' + n.cat];
+    if (g) {
+      edges.push({ a: n, b: g, type: 'part_of' });
+      var ang = Math.atan2(g.ty, g.tx);
+      n.tx = g.tx + Math.cos(ang) * 0.2 + (Math.random() - 0.5) * 0.1;
+      n.ty = g.ty + Math.sin(ang) * 0.2 + (Math.random() - 0.5) * 0.1;
+      n.tz = (Math.random() - 0.5) * 0.06;
+      n.x = n.tx; n.y = n.ty; n.z = n.tz;
+    }
+    closeModal();
+    touch();
+    relayout();
+    persist();
+    select(n, true);
+    toast('已新增：' + n.title);
+  }
+
+  // ---------- 日记 → 星云 ----------
+  var diaryPanel = document.getElementById('diary');
+  var diaryFab = document.getElementById('diary-fab');
+  var diaryBusy = false;
+
+  function openDiary() {
+    diaryPanel.classList.add('on');
+    diaryPanel.setAttribute('aria-hidden', 'false');
+    diaryFab.classList.add('on');
+    setTimeout(function () { document.getElementById('diary-text').focus(); }, 80);
+  }
+  function closeDiary() {
+    diaryPanel.classList.remove('on');
+    diaryPanel.setAttribute('aria-hidden', 'true');
+    diaryFab.classList.remove('on');
+  }
+  function toggleDiary() {
+    if (diaryPanel.classList.contains('on')) closeDiary(); else openDiary();
+  }
+
+  // 新节点从源点位置出生，配合物理斥力形成向外裂开的效果
+  function spawnBorn(n, src, now) {
+    var sx = src ? src.x : 0, sy = src ? src.y : 0, sz = src ? src.z : 0;
+    n.x = n.tx = sx + (Math.random() - 0.5) * 0.02;
+    n.y = n.ty = sy + (Math.random() - 0.5) * 0.02;
+    n.z = n.tz = sz + (Math.random() - 0.5) * 0.02;
+    n.vx = (Math.random() - 0.5) * 0.02;
+    n.vy = (Math.random() - 0.5) * 0.02;
+    n.vz = (Math.random() - 0.5) * 0.02;
+    n.bornAt = now;
+    // 新生的节点先强制显示标签一段时间，避免被缩放阈值或标签避让规则隐藏
+    n.labelUntil = now + 15000;
+  }
+
+  // 静默把日记原文追加到服务端的 data/diary_log.md，不阻塞 UI
+  function backupDiaryTxt(text, ai) {
+    var d = new Date();
+    var pad = function (x) { return ('0' + x).slice(-2); };
+    var date = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' +
+      pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    var tags = ((ai && ai.nodes) || []).map(function (item) {
+      return String(item && typeof item === 'object' ? (item.label || '') : (item || '')).trim();
+    }).filter(Boolean);
+    var headers = { 'Content-Type': 'application/json' };
+    if (WRITE_TOKEN) headers['x-write-token'] = WRITE_TOKEN;
+    fetch('/api/save-diary-txt', {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({ date: date, content: text, tags: tags })
+    }).then(function (r) {
+      if (r.ok) console.log('[备份成功] 日记已追加至 data/diary_log.md');
+    }).catch(function () { /* 静默失败，不影响主流程 */ });
+  }
+
+  function injectDiary(text, rawTitle, ai) {
+    var now = Date.now();
+    if (state.view !== 'nebula') setView('nebula');
+    var cat = diaryLayerId();
+    var stamp = new Date(now);
+    var ymd = stamp.getFullYear() + '-' + ('0' + (stamp.getMonth() + 1)).slice(-2) + '-' + ('0' + stamp.getDate()).slice(-2);
+    var hhmm = ('0' + stamp.getHours()).slice(-2) + ':' + ('0' + stamp.getMinutes()).slice(-2);
+
+    // 1. 当天日期容器节点：📅 YYYY-MM-DD，同一天自动复用
+    var dateTitle = '📅 ' + ymd;
+    var dateNode = byTitle[dateTitle];
+    if (!dateNode || dateNode.isGroup || dateNode.cat === 'hub') {
+      var did = 'date_' + ymd;
+      while (byId[did]) did += '_x';
+      dateNode = mkNode(cat, dateTitle, '当天的碎片日记归集节点。', 0.8, { id: did });
+      var dg0 = byId['g_' + cat];
+      if (dg0) edges.push({ a: dateNode, b: dg0, type: 'part_of' });
+      spawnBorn(dateNode, dg0 || hub, now);
+    }
+
+    // 2. 日记主节点：📝 HH:mm + 标题（没有标题就用正文前几个字），全文仍存放在 desc
+    var snippet = (rawTitle || '').trim();
+    if (!snippet) snippet = Array.from(String(text || '').replace(/\s+/g, ' ')).slice(0, 6).join('');
+    snippet = Array.from(snippet).slice(0, 10).join('');
+    var title = '📝 ' + hhmm + ' ' + snippet;
+    if (byTitle[title]) {
+      var seq = 2;
+      while (byTitle[title + ' · ' + seq]) seq++;
+      title += ' · ' + seq;
+    }
+    var id = 'diary_' + now;
+    while (byId[id]) id += '_x';
+    var main = mkNode(cat, title, text, 1.0, { id: id });
+    var dg = byId['g_' + cat];
+    if (dg) edges.push({ a: main, b: dg, type: 'part_of' });
+    // 3. 日记 → 当天日期容器：属于
+    edges.push({ a: main, b: dateNode, type: 'belongs', label: '属于' });
+    spawnBorn(main, dateNode, now);
+
+    // 2. 实体节点：同名复用；新节点按 AI 分配的 layer 落位，缺省归入「日常活动」
+    var map = {};
+    var metaMap = {};
+
+    // 确保实体与所属分层的中心节点（分组节点）有 part_of 连线，形成网状结构
+    function attachGroup(node, groupCat) {
+      var g = byId['g_' + groupCat];
+      if (!g) return;
+      for (var i = 0; i < edges.length; i++) {
+        var e = edges[i];
+        if (e.type === 'part_of' && ((e.a === node && e.b === g) || (e.a === g && e.b === node))) return;
+      }
+      edges.push({ a: node, b: g, type: 'part_of' });
+    }
+
+    // 元标签（Meta-Tag）：把同类事件收拢到一个固定的大节点，避免标签满天飞
+    function attachMeta(node, groupCat, metaName) {
+      var key = String(metaName || '').trim();
+      if (!key) return;
+      var m = metaMap[key];
+      if (!m) {
+        var existing = byTitle['◈ ' + key];
+        if (existing && existing.isMeta) m = existing;
+      }
+      if (!m) {
+        var mid = newId();
+        while (byId[mid]) mid += '_x';
+        m = mkNode(groupCat, '◈ ' + key, 'AI 归纳的元标签分类节点。', 0.8, { id: mid });
+        m.isMeta = true;
+        m.labelUntil = now + 15000;
+        spawnBorn(m, main, now);
+        attachGroup(m, groupCat);
+      }
+      metaMap[key] = m;
+      for (var i = 0; i < edges.length; i++) {
+        var e = edges[i];
+        if (e.type === 'belongs' && e.a === node && e.b === m) return;
+      }
+      edges.push({ a: node, b: m, type: 'belongs', label: '属于' });
+    }
+
+    ((ai && ai.nodes) || []).forEach(function (item) {
+      var name = String(item && typeof item === 'object' ? (item.label || '') : (item || '')).trim();
+      if (!name) return;
+      var metaName = (item && typeof item === 'object') ? item.meta : null;
+      var found = byTitle[name];
+      if (found && !found.isGroup && !found.isMeta && found.cat !== 'hub') {
+        found.la = now;
+        found._ps = 1;
+        found.labelUntil = now + 15000;
+        map[name] = found;
+        attachGroup(found, found.cat);
+        attachMeta(found, found.cat, metaName);
+        return;
+      }
+      var catId = (item && typeof item === 'object' && item.layer && CATS[item.layer]) ? item.layer : 'activity';
+      // 实体权重低于日记主节点，作为依附的卫星
+      var n = mkNode(catId, name, LAYER_MOOD[catId] || '由日记自动提取的实体。', 0.5, { id: newId() });
+      spawnBorn(n, main, now);
+      attachGroup(n, catId);
+      attachMeta(n, catId, metaName);
+      map[name] = n;
+    });
+
+    // 3. 日记 → 实体：包含
+    Object.keys(map).forEach(function (name) {
+      edges.push({ a: main, b: map[name], type: 'contains', label: '包含' });
+    });
+
+    // 4. AI 识别出的实体关系
+    ((ai && ai.links) || []).forEach(function (l) {
+      var a = map[l.source], b = map[l.target];
+      if (!a || !b || a === b) return;
+      if (hasRelate(a, b)) return;
+      edges.push({ a: a, b: b, type: 'relates', label: String(l.rel || '关联') });
+    });
+
+    applyGraph();
+    select(main, false);
+    persist();
+    return { count: Object.keys(map).length, links: ((ai && ai.links) || []).length };
+  }
+
+  function launchDiary() {
+    if (diaryBusy) return;
+    var textEl = document.getElementById('diary-text');
+    var titleEl = document.getElementById('diary-title');
+    var hintEl = document.getElementById('diary-hint');
+    var saveBtn = document.getElementById('diary-save');
+    var text = textEl.value.trim();
+    if (!text) {
+      toast('日记不能为空，先写点什么');
+      textEl.focus();
+      return;
+    }
+    diaryBusy = true;
+    var oldLabel = saveBtn.textContent;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Loading...';
+    hintEl.textContent = 'AI 正在解析认知网络...';
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 90000);
+
+    function reset() {
+      clearTimeout(timer);
+      diaryBusy = false;
+      saveBtn.disabled = false;
+      saveBtn.textContent = oldLabel;
+      hintEl.textContent = '写完点发射，AI 会提取 2–4 个实体并注入星云。';
+    }
+
+    fetch('/api/ai-parse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text }),
+      signal: ctrl ? ctrl.signal : undefined
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (!r.ok) throw new Error((d && d.error) || ('HTTP ' + r.status));
+        return d;
+      });
+    }).then(function (ai) {
+      var info = injectDiary(text, titleEl.value, ai);
+      backupDiaryTxt(text, ai);
+      textEl.value = '';
+      titleEl.value = '';
+      // 不收起面板，方便同一天连续记录多条碎片
+      toast('已发射：' + info.count + ' 个实体 · ' + info.links + ' 条关系');
+    }).catch(function (err) {
+      if (err && err.name === 'AbortError') toast('AI 解析超时，请稍后重试');
+      else toast('解析失败：' + (err && err.message ? err.message : '未知错误'));
+    }).then(reset);
+  }
+
+  diaryFab.addEventListener('click', toggleDiary);
+  document.getElementById('diary-close').addEventListener('click', closeDiary);
+  document.getElementById('diary-save').addEventListener('click', launchDiary);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && diaryPanel.classList.contains('on')) closeDiary();
+  });
+
+  function updateNodeFromForm() {
+    var n = editing;
+    if (!n) return;
+    var title = fTitle.value.trim();
+    if (!title) { toast('标题不能为空'); fTitle.focus(); return; }
+    var oldCat = n.cat;
+    var oldTitle = n.title;
+    n.title = title;
+    n.desc = fDesc.value.trim() || '手动添加，暂无描述。';
+    n.content = fContent.value.trim();
+    n.w = parseFloat(fW.value) || 0.6;
+    n.flag = fFlag.value.trim() || undefined;
+    if (!n.isGroup && n.cat !== 'hub') n.cat = fCat.value;
+    if (oldCat !== n.cat) {
+      for (var i = 0; i < edges.length; i++) {
+        if (edges[i].a === n && edges[i].type === 'part_of') edges[i].b = byId['g_' + n.cat];
+      }
+    }
+    if (n.isGroup && oldTitle !== n.title) {
+      CATS[n.cat].label = n.title;
+      fillCatOptions();
+      updateCounts();
+    }
+    state.neighbors = neighborSet(n);
+    closeModal();
+    touch();
+    relayout();
+    persist();
+    select(n, true);
+    toast('已更新：' + n.title);
+  }
+
+  function deleteNode(n) {
+    if (!n || n.isGroup || n.cat === 'hub') return;
+    if (!window.confirm('确认删除「' + n.title + '」及其关联连线？')) return;
+    var i;
+    for (i = edges.length - 1; i >= 0; i--) {
+      if (edges[i].a === n || edges[i].b === n) edges.splice(i, 1);
+    }
+    for (i = nodes.length - 1; i >= 0; i--) {
+      if (nodes[i] === n) nodes.splice(i, 1);
+    }
+    delete byId[n.id];
+    if (byTitle[n.title] === n) delete byTitle[n.title];
+    if (state.selected === n) select(null, false);
+    touch();
+    persist();
+    toast('已删除：' + n.title);
+  }
+
+  function addLayer() {
+    var name = window.prompt('新分层名称（例如：直觉、情绪）');
+    if (name == null) return;
+    name = name.trim();
+    if (!name) { toast('名称不能为空'); return; }
+    for (var i = 0; i < LAYERS.length; i++) {
+      if (CATS[LAYERS[i]].label === name) { toast('已有同名分层'); return; }
+    }
+    var cat = 'x' + Date.now().toString(36);
+    var palette = ['#ff7ab8', '#7fffd4', '#ffd166', '#8ecae6', '#c8a2ff', '#9ae66e', '#ff9f45'];
+    CATS[cat] = { label: name, color: palette[LAYERS.length % palette.length] };
+    LAYERS.push(cat);
+    renderLegend();
+    var g = mkNode(cat, name, '手动新增的分层。', 0.8, { isGroup: true, pinned: true, id: 'g_' + cat });
+    if (hub) edges.push({ a: hub, b: g, type: 'controls' });
+    fillCatOptions();
+    relayout();
+    touch();
+    persist();
+    select(g, true);
+    toast('已新增分层：' + name);
+  }
+
+  function deleteLayer(n) {
+    if (!n || !n.isGroup) return;
+    var kids = nodes.filter(function (x) { return x.cat === n.cat && !x.isGroup; }).length;
+    if (kids) { toast('该层还有 ' + kids + ' 个节点，请先删除或移到别的层'); return; }
+    if (!window.confirm('删除分层「' + n.title + '」？')) return;
+    for (var i = edges.length - 1; i >= 0; i--) {
+      if (edges[i].a === n || edges[i].b === n) edges.splice(i, 1);
+    }
+    nodes = nodes.filter(function (x) { return x !== n; });
+    delete byId[n.id];
+    if (byTitle[n.title] === n) delete byTitle[n.title];
+    delete CATS[n.cat];
+    var idx = LAYERS.indexOf(n.cat);
+    if (idx >= 0) LAYERS.splice(idx, 1);
+    renderLegend();
+    delete hidden[n.cat];
+    if (state.selected === n) select(null, false);
+    fillCatOptions();
+    touch();
+    relayout();
+    persist();
+    toast('已删除分层：' + n.title);
+  }
+
+  function hasRelate(a, b) {
+    for (var i = 0; i < edges.length; i++) {
+      var e = edges[i];
+      if (e.type !== 'relates') continue;
+      if ((e.a === a && e.b === b) || (e.a === b && e.b === a)) return true;
+    }
+    return false;
+  }
+
+  function startLink(from) {
+    if (!from || from.isGroup || from.cat === 'hub') return;
+    linkingFrom = from;
+    canvas.classList.add('linking');
+    if (window.innerWidth <= 720) right.classList.remove('open');
+    toast('请再点击一个节点完成关联，Esc 取消');
+  }
+
+  function commitLink(to) {
+    var from = linkingFrom;
+    linkingFrom = null;
+    canvas.classList.remove('linking');
+    if (!from) return;
+    if (!to || to === from) { toast('已取消关联'); return; }
+    if (to.isGroup || to.cat === 'hub') { toast('只能关联内容节点'); return; }
+    if (hasRelate(from, to)) { toast('这两个节点已经关联'); select(from, true); return; }
+    edges.push({ a: from, b: to, type: 'relates' });
+    updateStats();
+    persist();
+    select(from, true);
+    toast('已关联：' + from.title + ' ↔ ' + to.title);
+  }
+
+  function removeRelate(a, b) {
+    var hit = false;
+    for (var i = edges.length - 1; i >= 0; i--) {
+      var e = edges[i];
+      if (e.type !== 'relates') continue;
+      if ((e.a === a && e.b === b) || (e.a === b && e.b === a)) { edges.splice(i, 1); hit = true; }
+    }
+    if (!hit) { toast('没有找到这条关联'); return; }
+    updateStats();
+    persist();
+    if (state.selected) renderDetail(state.selected);
+    toast('已解除关联');
+  }
+
+  fW.addEventListener('input', function () {
+    fWv.textContent = Number(fW.value).toFixed(2);
+  });
+  document.getElementById('m-cancel').addEventListener('click', closeModal);
+  document.getElementById('m-save').addEventListener('click', function () {
+    if (editing) updateNodeFromForm(); else addNodeFromForm();
+  });
+  modal.addEventListener('mousedown', function (e) {
+    if (e.target === modal) closeModal();
+  });
+
+  document.getElementById('add').addEventListener('click', function () { openModal(null); });
+  document.getElementById('addlayer').addEventListener('click', addLayer);
+
+  document.getElementById('roam').addEventListener('click', toggleRoam);
+
+  // 关于
+  var aboutEl = document.getElementById('about');
+  document.getElementById('about-open').addEventListener('click', function () { aboutEl.classList.add('on'); });
+  document.getElementById('about-close').addEventListener('click', function () { aboutEl.classList.remove('on'); });
+  aboutEl.addEventListener('mousedown', function (e) {
+    if (e.target === aboutEl) aboutEl.classList.remove('on');
+  });
+
+  function exportMarkdown() {
+    var d = new Date();
+    function pad(v) { return (v < 10 ? '0' : '') + v; }
+    var date = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    var clock = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    var count = 0;
+    nodes.forEach(function (n) { if (!n.isGroup) count++; });
+    var lines = [];
+    lines.push('# ' + TEMPLATE.title, '');
+    lines.push('> 导出于 ' + date + ' ' + clock + ' · ' + count + ' 条内容 · ' + edges.length + ' 条连线 · ' + LAYERS.length + ' 个分层', '');
+    lines.push('## 观测点', '');
+    lines.push('### ' + hub.title, '');
+    if (hub.desc) lines.push(hub.desc, '');
+    if (hub.content) lines.push(hub.content, '');
+    LAYERS.forEach(function (cat) {
+      var list = nodes.filter(function (n) { return !n.isGroup && n.cat === cat; });
+      if (!list.length) return;
+      lines.push('## ' + (CATS[cat] ? CATS[cat].label : cat) + '（' + list.length + '）', '');
+      list.forEach(function (n) {
+        lines.push('### ' + n.title + (n.flag ? '【' + n.flag + '】' : ''), '');
+        if (n.desc) lines.push(n.desc, '');
+        if (n.content) lines.push(n.content, '');
+        var rel = [];
+        edges.forEach(function (e) {
+          if (e.type !== 'relates' && e.type !== 'same_name') return;
+          if (e.a === n) rel.push(e.b.title);
+          else if (e.b === n) rel.push(e.a.title);
+        });
+        if (rel.length) lines.push('关联：' + rel.join('、'), '');
+      });
+    });
+    var blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = TEMPLATE.exportName + '-' + date + '.md';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    toast('已导出 Markdown');
+  }
+  document.getElementById('exportmd').addEventListener('click', exportMarkdown);
+
+  var demoBtn = document.getElementById('demo');
+  var isLocalHost = /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname) || location.protocol === 'file:';
+  if (demoBtn && isLocalHost) {
+    demoBtn.hidden = false;
+    demoBtn.addEventListener('click', function () {
+      if (demoMode) { location.reload(); return; }
+      loadDemo();
+    });
+  }
+  document.getElementById('export').addEventListener('click', function () {
+    var d = new Date();
+    var stamp = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+    var blob = new Blob([JSON.stringify(snapshot(), null, 2)], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = TEMPLATE.exportName + '-graph-' + stamp + '.json';
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    toast('已导出 JSON');
+  });
+  document.getElementById('import').addEventListener('click', function () {
+    document.getElementById('file').click();
+  });
+  document.getElementById('file').addEventListener('change', function (e) {
+    var f = e.target.files && e.target.files[0];
+    if (!f) return;
+    var r = new FileReader();
+    r.onload = function () {
+      try {
+        var s = JSON.parse(r.result);
+        if (!restoreSnapshot(s)) { toast('文件格式不对：缺少节点或观测点'); return; }
+        safeSet(presetKey(), JSON.stringify(snapshot()));
+        if (canFetch) {
+          pushToServer().then(function (ok) {
+            toast(ok ? '已导入并写入服务器' : '已导入到本机，服务器写入失败');
+            setTimeout(function () { location.reload(); }, 600);
+          });
+        } else {
+          toast('已导入到本机');
+          setTimeout(function () { location.reload(); }, 400);
+        }
+      } catch (err) {
+        toast('JSON 解析失败');
+      }
+    };
+    r.readAsText(f);
+    e.target.value = '';
+  });
+  // 键盘
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      if (aboutEl.classList.contains('on')) { aboutEl.classList.remove('on'); return; }
+      if (modal.classList.contains('on')) { closeModal(); return; }
+      if (linkingFrom) { linkingFrom = null; canvas.classList.remove('linking'); toast('已取消关联'); return; }
+      if (input.value) { input.value = ''; runSearch(); }
+      else select(null, false);
+    }
+  });
+
+  // 统计
+  updateStats();
+
+  // 空闲自动退出：30 分钟无操作时清掉浏览器缓存的 Basic Auth 凭证，强制重新输密码
+  var IDLE_LIMIT_MS = 30 * 60 * 1000;
+  var idleTimer = null;
+  function idleLogout() {
+    try {
+      // 先用一组错误凭证请求一次，让浏览器丢弃已缓存的 Basic Auth 凭据
+      fetch('/', { cache: 'no-store', headers: { Authorization: 'Basic ' + btoa('logout:logout') } })
+        .catch(function () {})
+        .then(function () { window.location.reload(); });
+    } catch (e) {
+      window.location.reload();
+    }
+  }
+  function resetIdle() {
+    if (!canFetch) return;
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(idleLogout, IDLE_LIMIT_MS);
+  }
+  ['mousemove', 'mousedown', 'keydown', 'wheel', 'touchstart'].forEach(function (ev) {
+    window.addEventListener(ev, resetIdle, { passive: true });
+  });
+  resetIdle();
+
+  // 启动
+  if (window.location.protocol === 'file:') {
+    var filetipEl = document.getElementById('filetip');
+    filetipEl.classList.add('on');
+    document.getElementById('filetip-x').addEventListener('click', function () { filetipEl.classList.remove('on'); });
+  }
+  resize();
+  updatePaneBtns();
+  layoutGalaxy();
+  nodes.forEach(function (n) { n.x = n.tx; n.y = n.ty; n.z = n.tz; });
+  window.__NNAO__ = { nodes: nodes, edges: edges, state: state, cats: CATS, hub: hub, byTitle: byTitle, search: search, setView: setView, select: select, renderDetail: renderDetail, addNodeFromForm: addNodeFromForm, updateNodeFromForm: updateNodeFromForm, deleteNode: deleteNode, openModal: openModal, snapshot: snapshot, loadFromServer: loadFromServer, canFetch: canFetch, startLink: startLink, commitLink: commitLink, removeRelate: removeRelate, hasRelate: hasRelate, addLayer: addLayer, deleteLayer: deleteLayer, buildFull: buildFull, getPreset: function () { return preset; } };
+  loadFromServer();
+  frame();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "memory-nebula-template",
+  "version": "2.0.0",
+  "private": true,
+  "description": "记忆海-镜子模板：单文件页面 + 零依赖 Node 持久化服务",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
