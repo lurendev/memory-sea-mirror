@@ -2,6 +2,7 @@
 
 const http = require('http');
 const fs = require('fs');
+const crypto = require('crypto');
 const path = require('path');
 
 const ROOT = __dirname;
@@ -120,28 +121,109 @@ function authorized(req) {
   return req.headers['x-write-token'] === WRITE_TOKEN;
 }
 
-// HTTP Basic Auth 门禁：校验 Authorization 头里的 用户名:密码
-function basicAuthOk(req) {
-  const header = req.headers.authorization || '';
-  if (!header.startsWith('Basic ')) return false;
-  let creds = '';
-  try {
-    creds = Buffer.from(header.slice(6).trim(), 'base64').toString('utf8');
-  } catch (e) {
-    return false;
+// ===== 登录会话：Cookie + 12 小时免登（不再用 Basic Auth 弹窗）=====
+const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const SESSION_COOKIE = 'msm_sess';
+const sessions = new Map(); // token -> 过期时间戳
+
+function sessionToken(req) {
+  const raw = req.headers.cookie || '';
+  for (const part of raw.split(';')) {
+    const i = part.indexOf('=');
+    if (i < 0) continue;
+    if (part.slice(0, i).trim() === SESSION_COOKIE) return part.slice(i + 1).trim();
   }
-  const idx = creds.indexOf(':');
-  if (idx < 0) return false;
-  return creds.slice(0, idx) === SITE_USER && creds.slice(idx + 1) === SITE_PASS;
+  return '';
 }
 
-function denyAuth(res, msg) {
-  res.writeHead(401, {
-    'WWW-Authenticate': 'Basic realm="' + AUTH_REALM + '"',
-    'Content-Type': 'text/plain; charset=utf-8',
-    'Cache-Control': 'no-store'
+function sessionOk(req) {
+  const t = sessionToken(req);
+  if (!t) return false;
+  const exp = sessions.get(t);
+  if (!exp) return false;
+  if (exp <= Date.now()) {
+    sessions.delete(t);
+    return false;
+  }
+  return true;
+}
+
+function newSession() {
+  const t = crypto.randomBytes(24).toString('hex');
+  sessions.set(t, Date.now() + SESSION_TTL_MS);
+  if (sessions.size > 2000) {
+    const now = Date.now();
+    for (const [k, v] of sessions) if (v <= now) sessions.delete(k);
+  }
+  return t;
+}
+
+// 未登录访问页面时下发的登录页（与站点同风格，不依赖浏览器弹窗）
+const LOGIN_HTML = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>记忆海-镜子 · 登录</title>
+<style>
+  html,body{height:100%;margin:0}
+  body{display:flex;align-items:center;justify-content:center;background:
+    radial-gradient(900px 600px at 20% 10%, rgba(90,120,255,.12), transparent 62%),
+    radial-gradient(800px 500px at 82% 92%, rgba(255,140,60,.07), transparent 60%), #05060a;
+    color:#e8ecf4;font:400 14px/1.6 "PingFang SC","Microsoft YaHei",system-ui,sans-serif;padding:24px}
+  .card{width:100%;max-width:330px;padding:26px 24px;border:1px solid rgba(255,255,255,.1);border-radius:14px;
+    background:rgba(14,17,26,.86);box-shadow:0 24px 60px rgba(0,0,0,.5)}
+  h1{margin:0 0 4px;font-size:17px;letter-spacing:.08em;font-weight:600}
+  p{margin:0 0 20px;font-size:11px;color:#5c6477;letter-spacing:.16em}
+  label{display:block;font-size:12px;color:#8e97ab;margin-bottom:6px}
+  input{width:100%;padding:9px 11px;margin-bottom:14px;border-radius:8px;border:1px solid rgba(255,255,255,.14);
+    background:rgba(255,255,255,.04);color:#e8ecf4;font:400 13px/1.4 inherit;outline:none}
+  input:focus{border-color:rgba(120,160,255,.55);box-shadow:0 0 0 3px rgba(90,130,255,.1)}
+  button{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,210,120,.5);
+    background:rgba(255,190,90,.12);color:#ffe2a0;font:500 13px/1 inherit;letter-spacing:.06em;cursor:pointer}
+  button:hover{background:rgba(255,190,90,.2)}
+  button:disabled{opacity:.5;cursor:default}
+  .err{min-height:18px;margin-top:12px;font-size:12px;color:#ff8d8d}
+</style>
+</head>
+<body>
+<form class="card" id="f" autocomplete="on">
+  <h1>记忆海-镜子</h1>
+  <p>MEMORY SEA · MIRROR</p>
+  <label for="u">账号</label>
+  <input id="u" name="user" type="text" autocomplete="username" required>
+  <label for="p">密码</label>
+  <input id="p" name="pass" type="password" autocomplete="current-password" required>
+  <button type="submit" id="b">进入星云</button>
+  <div class="err" id="e"></div>
+</form>
+<script>
+(function () {
+  var f = document.getElementById('f'), b = document.getElementById('b'), e = document.getElementById('e');
+  f.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    b.disabled = true; e.textContent = '';
+    fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+      body: JSON.stringify({ user: document.getElementById('u').value, pass: document.getElementById('p').value })
+    }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { s: r.status, j: j }; }); })
+      .then(function (x) {
+        if (x.s === 200 && x.j.ok) { location.replace('/'); return; }
+        e.textContent = x.j.error || ('登录失败（' + x.s + '）');
+        b.disabled = false;
+      })
+      .catch(function () { e.textContent = '网络异常，请重试'; b.disabled = false; });
   });
-  res.end(msg);
+})();
+<\/script>
+</body>
+</html>`;
+
+function sendLoginPage(res) {
+  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+  res.end(LOGIN_HTML);
 }
 
 // 登录失败限流：同一 IP 15 分钟内错 5 次，锁定 15 分钟，防止无限爆破
@@ -170,10 +252,19 @@ function authBlockedMs(ip) {
   return left;
 }
 
-function noteAuthFail(ip) {
+function noteAuthFail(ip, sig) {
   const now = Date.now();
   let rec = authFails.get(ip);
-  if (!rec || now - rec.since > AUTH_WINDOW_MS) rec = { count: 0, since: now, blockedUntil: 0 };
+  if (!rec || now - rec.since > AUTH_WINDOW_MS) rec = { count: 0, since: now, blockedUntil: 0, seen: new Map() };
+  // 同一组错误凭证重复请求（浏览器缓存旧密码时一次刷新会连打好几个请求）只算一次
+  if (sig) {
+    if (rec.seen.has(sig)) {
+      authFails.set(ip, rec);
+      return;
+    }
+    rec.seen.set(sig, now);
+    if (rec.seen.size > 60) rec.seen.clear();
+  }
   rec.count += 1;
   if (rec.count >= AUTH_MAX_FAILS) rec.blockedUntil = now + AUTH_WINDOW_MS;
   authFails.set(ip, rec);
@@ -206,6 +297,27 @@ async function rotateBackup(file, bak) {
     await fs.promises.copyFile(file, bak);
   } catch (e) {
     if (e.code !== 'ENOENT') console.error('[backup]', e.message);
+  }
+}
+
+// 归档备份：把当前图谱另存到 data/backups/<名称>-YYYYMMDD-HHmmss.json
+// 用于「导入全量覆盖」等破坏性写入，避免只留一份会被下次保存覆盖的 .bak
+async function archiveBackup(file) {
+  try {
+    if (!fs.existsSync(file)) return '';
+    const dir = path.join(DATA_DIR, 'backups');
+    await fs.promises.mkdir(dir, { recursive: true });
+    const d = new Date();
+    const p = (v) => ('0' + v).slice(-2);
+    const stamp = d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' +
+      p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+    const name = path.basename(file, '.json') + '-' + stamp + '.json';
+    const target = path.join(dir, name);
+    await fs.promises.copyFile(file, target);
+    return name;
+  } catch (e) {
+    console.error('[archive]', e.message);
+    return '';
   }
 }
 
@@ -354,23 +466,71 @@ async function serveStatic(req, res, pathname) {
 }
 
 const server = http.createServer(async (req, res) => {
-  // 1. 访问门禁：所有请求（页面 + API）先过 Basic Auth，并限制失败次数
-  if (AUTH_ENABLED) {
+  const rawPath = req.url.split('?')[0];
+
+  // 0. 登出：销毁会话并清 Cookie，页面刷新后回到登录页
+  if (rawPath === '/api/logout') {
+    const t = sessionToken(req);
+    if (t) sessions.delete(t);
+    res.writeHead(200, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'Set-Cookie': SESSION_COOKIE + '=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax'
+    });
+    return res.end(JSON.stringify({ ok: true }));
+  }
+
+  // 0.1 登录：校验账号密码，成功则种下 12 小时会话 Cookie
+  if (rawPath === '/api/login') {
+    if (req.method !== 'POST') {
+      res.setHeader('Allow', 'POST');
+      return send(res, 405, { error: '不支持的方法' });
+    }
     const ip = clientIp(req);
     const waitMs = authBlockedMs(ip);
     if (waitMs > 0) {
       res.writeHead(429, {
         'Retry-After': String(Math.ceil(waitMs / 1000)),
-        'Content-Type': 'text/plain; charset=utf-8',
+        'Content-Type': 'application/json; charset=utf-8',
         'Cache-Control': 'no-store'
       });
-      return res.end('尝试次数过多，请 ' + Math.ceil(waitMs / 60000) + ' 分钟后再试');
+      return res.end(JSON.stringify({ error: '尝试次数过多，请 ' + Math.ceil(waitMs / 60000) + ' 分钟后再试' }));
     }
-    if (!basicAuthOk(req)) {
-      noteAuthFail(ip);
-      return denyAuth(res, 'Access Denied');
+    const raw = await readBody(req);
+    let user = '';
+    let pass = '';
+    if (/^application\/json/i.test(req.headers['content-type'] || '')) {
+      try {
+        const j = JSON.parse(raw);
+        user = String(j.user || '');
+        pass = String(j.pass || '');
+      } catch (e) { /* 非法 JSON 按空凭证处理 */ }
+    } else {
+      const p = new URLSearchParams(raw);
+      user = p.get('user') || '';
+      pass = p.get('pass') || '';
+    }
+    if (!AUTH_ENABLED) return send(res, 200, { ok: true });
+    if (user !== SITE_USER || pass !== SITE_PASS) {
+      noteAuthFail(ip, crypto.createHash('sha1').update(user + ':' + pass).digest('hex'));
+      return send(res, 401, { error: '账号或密码错误' });
     }
     clearAuthFail(ip);
+    const token = newSession();
+    res.writeHead(200, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'Set-Cookie': SESSION_COOKIE + '=' + token + '; Path=/; Max-Age=' + Math.floor(SESSION_TTL_MS / 1000) + '; HttpOnly; SameSite=Lax'
+    });
+    return res.end(JSON.stringify({ ok: true }));
+  }
+
+  // 1. 访问门禁：会话有效放行；未登录时页面给登录页、API 给 401
+  if (AUTH_ENABLED && !sessionOk(req)) {
+    if (rawPath.startsWith('/api/') || rawPath === '/health') {
+      return send(res, 401, { error: '未登录', needLogin: true });
+    }
+    return sendLoginPage(res);
   }
 
   const url = new URL(req.url, 'http://' + (req.headers.host || 'localhost'));
@@ -478,9 +638,11 @@ const server = http.createServer(async (req, res) => {
         }
         const bad = validGraph(graph);
         if (bad) return send(res, 400, { error: bad });
+        // backup=1：破坏性写入（如导入全量覆盖）前先归档当前图谱
+        const archived = url.searchParams.get('backup') === '1' ? await archiveBackup(files.data) : '';
         await rotateBackup(files.data, files.bak);
         await writeGraph(files.data, graph);
-        return send(res, 200, { ok: true, preset: preset, nodes: graph.nodes.length, edges: graph.edges.length, savedAt: new Date().toISOString() });
+        return send(res, 200, { ok: true, preset: preset, nodes: graph.nodes.length, edges: graph.edges.length, backup: archived || null, savedAt: new Date().toISOString() });
       }
       if (method === 'DELETE') {
         if (!authorized(req)) return send(res, 401, { error: '写入令牌不正确' });

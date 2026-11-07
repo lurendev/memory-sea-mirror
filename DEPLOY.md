@@ -8,7 +8,7 @@
 | --- | --- |
 | 线上地址 | `https://你的域名/`（务必用 https，不要用 http） |
 | 镜像仓库（公网） | `registry.cn-hangzhou.aliyuncs.com/你的命名空间/你的镜像名` |
-| 当前镜像 tag | `2.3` |
+| 当前镜像 tag | `2.4` |
 | 容器端口 | `8787` |
 | 数据目录 | `/app/data`（必须挂持久卷） |
 
@@ -17,10 +17,10 @@
 在包含 `Dockerfile` 的项目根目录执行：
 
 ```bash
-docker build -t registry.cn-hangzhou.aliyuncs.com/你的命名空间/你的镜像名:2.3 .
+docker build -t registry.cn-hangzhou.aliyuncs.com/你的命名空间/你的镜像名:2.4 .
 ```
 
-以后发新版本就把 `2.3` 换成新 tag（如 `2.3`），不要覆盖旧 tag，方便回滚。
+以后发新版本就把 `2.4` 换成新 tag（如 `2.5`），不要覆盖旧 tag，方便回滚。
 
 ## 二、登录并推送
 
@@ -28,7 +28,7 @@ docker build -t registry.cn-hangzhou.aliyuncs.com/你的命名空间/你的镜�
 docker login --username=你的阿里云账号 registry.cn-hangzhou.aliyuncs.com
 # 密码填 ACR「访问凭证 → 固定密码」，不是阿里云账号密码
 
-docker push registry.cn-hangzhou.aliyuncs.com/你的命名空间/你的镜像名:2.3
+docker push registry.cn-hangzhou.aliyuncs.com/你的命名空间/你的镜像名:2.4
 ```
 
 如果你的镜像仓库是**私有**的，注意要用**公网**地址 `registry.cn-hangzhou.aliyuncs.com`；`registry-vpc...` 只有阿里云内网能拉。
@@ -36,7 +36,7 @@ docker push registry.cn-hangzhou.aliyuncs.com/你的命名空间/你的镜像名
 ## 三、Sealos 创建应用（镜像部署）
 
 1. 桌面 →「应用管理」→「新建应用」→ 选 **镜像部署**。
-2. 镜像地址填 `registry.cn-hangzhou.aliyuncs.com/你的命名空间/你的镜像名:2.3`。
+2. 镜像地址填 `registry.cn-hangzhou.aliyuncs.com/你的命名空间/你的镜像名:2.4`。
 3. 私有镜像仓要先在 Sealos 添加镜像仓库凭据（用户名＝阿里云账号，密码＝ACR 固定密码）。
 4. 容器端口填 `8787`（与 `Dockerfile` 的 `EXPOSE` 一致）。
 5. 填环境变量：
@@ -68,11 +68,11 @@ docker push registry.cn-hangzhou.aliyuncs.com/你的命名空间/你的镜像名
 ## 五、后续更新
 
 ```bash
-docker build -t registry.cn-hangzhou.aliyuncs.com/你的命名空间/你的镜像名:2.3 .
-docker push registry.cn-hangzhou.aliyuncs.com/你的命名空间/你的镜像名:2.3
+docker build -t registry.cn-hangzhou.aliyuncs.com/你的命名空间/你的镜像名:2.4 .
+docker push registry.cn-hangzhou.aliyuncs.com/你的命名空间/你的镜像名:2.4
 ```
 
-然后在 Sealos 应用里把镜像 tag 改成 `2.3` 重新部署即可，PVC 数据不受影响。
+然后在 Sealos 应用里把镜像 tag 改成 `2.4` 重新部署即可，PVC 数据不受影响。
 
 ## 六、数据备份
 
