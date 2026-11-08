@@ -3,7 +3,7 @@
 **中文 |** **[English](README_en.md)**
 
 # 🌌 小白半小时零代码四步部署：「记忆海-镜子」打造你的专属 3D 日记网站教程地址:
-http://luren.bot.cd/posts/902c5cc0.html
+http://luren.bot.cd/posts/jiyihai.html
 
 **在线演示：<https://jiyihai.cc.cd/>**（演示站只读内存数据，不写入本机或服务器）
 
