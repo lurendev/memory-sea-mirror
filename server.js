@@ -48,7 +48,7 @@ const LLM_API_URL = process.env.LLM_API_URL || 'https://api.deepseek.com/chat/co
 const LLM_MODEL = process.env.LLM_MODEL || 'deepseek-chat';
 const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 60000;
 // AI 可分配的实体分层，与 index.html 的 TEMPLATE.layers 保持一致
-const AI_LAYERS = ['activity', 'body', 'emotion', 'people', 'knowledge', 'goal'];
+const AI_LAYERS = ['activity', 'body', 'emotion', 'people', 'knowledge', 'goal', 'dream'];
 // 模型偶尔会返回中文分层名，统一映射回英文 id，避免全部落到「日常活动」
 const LAYER_ALIAS = {
   '日常活动': 'activity', '活动': 'activity', '生活琐事': 'activity', '工作事务': 'activity',
@@ -56,7 +56,8 @@ const LAYER_ALIAS = {
   '情绪暗流': 'emotion', '情绪': 'emotion', '情绪波动': 'emotion',
   '人际互动': 'people', '人际': 'people', '人物': 'people', '关系': 'people', '人际张力': 'people',
   '认知沉淀': 'knowledge', '认知': 'knowledge', '知识': 'knowledge',
-  '未来锚点': 'goal', '目标': 'goal', '未来': 'goal'
+  '未来锚点': 'goal', '目标': 'goal', '未来': 'goal',
+  '梦境': 'dream', '梦': 'dream', '梦中': 'dream', '清明梦': 'dream'
 };
 
 // 把日记拆成 2-4 个带语境的事件短语，并强制分配到生活化分层
@@ -68,9 +69,10 @@ const LLM_USER_PROMPT = (text) => `你是一个个人生活记忆图谱的提取
    示例：日记写“天亮前洗了衣服” → 提取“天亮前独自洗衣服”，不要提取“家务”。
 3. links 里的 rel 必须是具体关系词，例如：导致、引发、加剧、缓解、改善、属于、矛盾、回避、依赖、触发；禁止使用“关联”“有关”这类空泛词。
 4. 每个节点都必须分配 layer，并尽量给出 meta（2-6 字的固定分类名），用于把同类事件收拢到一个大节点。
-   layer 只能取：activity（日常活动）、body（身体状态）、emotion（情绪暗流）、people（人际互动）、knowledge（认知沉淀）、goal（未来锚点）。
+   layer 只能取：activity（日常活动）、body（身体状态）、emotion（情绪暗流）、people（人际互动）、knowledge（认知沉淀）、goal（未来锚点）、dream（梦境）。
    日记中出现具体人物，或出现对话、交流、关系时，至少有一个节点归入 people，标签要包含人物名和事件，不要只写泛化关系。
-   可选 meta：生理状态、工作事务、人际张力、情绪波动、生活琐事、认知收获。
+   日记内容如果是梦、梦境片段、睡梦中的场景或情绪，至少有一个节点必须归入 dream，标签要写清梦里的地点、人物或情节。
+   可选 meta：生理状态、工作事务、人际张力、情绪波动、生活琐事、认知收获、梦境片段。
 5. 绝对不要包含任何 markdown 代码块符号（如 \`\`\`json ），只返回纯净的 JSON 字符串。
 
 JSON 格式要求：
